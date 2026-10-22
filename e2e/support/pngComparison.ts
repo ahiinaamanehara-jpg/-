@@ -6,6 +6,7 @@ export function comparePngPixels(before: Buffer, after: Buffer) {
   const sameSize = a.width === b.width && a.height === b.height;
   let changedPixels = 0,
     visibleChangedPixels = 0,
+    materialChangedPixels = 0,
     maxAlphaDifference = 0,
     maxVisibleDifference = 0;
   const samples: Array<{
@@ -19,7 +20,8 @@ export function comparePngPixels(before: Buffer, after: Buffer) {
       const alphaA = a.data[p + 3],
         alphaB = b.data[p + 3];
       let changed = false,
-        visible = alphaA !== alphaB;
+        visible = alphaA !== alphaB,
+        material = alphaA !== alphaB;
       maxAlphaDifference = Math.max(
         maxAlphaDifference,
         Math.abs(alphaA - alphaB),
@@ -35,6 +37,11 @@ export function comparePngPixels(before: Buffer, after: Buffer) {
         const difference = Math.abs(whiteA - whiteB);
         maxVisibleDifference = Math.max(maxVisibleDifference, difference);
         visible ||= difference > 0;
+        // 半透明色のPNG復元では、色とalphaの乗除算で最大1段階丸められる。
+        // alpha・不透明色・1段階を超える変化は許容しない。
+        const rounding =
+          alphaA === alphaB && alphaA > 0 && alphaA < 255 ? 1 : 0;
+        material ||= difference > rounding;
       }
       if (changed) {
         changedPixels++;
@@ -47,6 +54,7 @@ export function comparePngPixels(before: Buffer, after: Buffer) {
           });
       }
       if (visible) visibleChangedPixels++;
+      if (material) materialChangedPixels++;
     }
   }
   return {
@@ -55,6 +63,7 @@ export function comparePngPixels(before: Buffer, after: Buffer) {
     afterSize: [b.width, b.height],
     changedPixels,
     visibleChangedPixels,
+    materialChangedPixels,
     maxAlphaDifference,
     maxVisibleDifference,
     samples,

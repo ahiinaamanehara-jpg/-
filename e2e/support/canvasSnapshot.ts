@@ -10,5 +10,5 @@ export async function expectCanvasUnchanged(page: Page, before: string) {
     Buffer.from(after.split(",")[1], "base64"),
   );
   expect(comparison.sameSize, JSON.stringify(comparison)).toBe(true);
-  expect(comparison.visibleChangedPixels, JSON.stringify(comparison)).toBe(0);
+  expect(comparison.materialChangedPixels, JSON.stringify(comparison)).toBe(0);
 }

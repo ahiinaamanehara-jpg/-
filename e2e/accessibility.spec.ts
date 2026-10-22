@@ -56,6 +56,8 @@ async function audit(page: Page, name: string) {
 }
 async function byKeyboard(page: Page, target: Locator) {
   await page.bringToFront();
+  // FirefoxでブラウザーのツールバーへTabが移る前に、本文から検証を始める。
+  await page.getByRole("heading", { level: 1 }).focus();
   const visited: string[] = [];
   for (let i = 0; i < 80; i++) {
     if (await target.evaluate((el) => el === document.activeElement)) return;

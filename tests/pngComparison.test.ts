@@ -31,6 +31,7 @@ describe("保存画像の内容の比較", () => {
     );
     expect(difference.visibleChangedPixels).toBe(1);
     expect(difference.maxVisibleDifference).toBe(1);
+    expect(difference.materialChangedPixels).toBe(1);
   });
   it("完全に透明な画素の未使用RGBだけの差を区別する", () => {
     const difference = comparePngPixels(
@@ -47,5 +48,28 @@ describe("保存画像の内容の比較", () => {
         PNG.sync.write(image([0, 0, 0, 0, 0, 0, 0, 0], 2)),
       ).sameSize,
     ).toBe(false);
+  });
+  it("alphaを保った半透明色の1段階の丸めを区別する", () => {
+    const difference = comparePngPixels(
+      PNG.sync.write(image([18, 52, 171, 128])),
+      PNG.sync.write(image([19, 52, 171, 128])),
+    );
+    expect(difference.visibleChangedPixels).toBe(1);
+    expect(difference.materialChangedPixels).toBe(0);
+  });
+  it("半透明のalphaが変わったら1段階でも検出する", () => {
+    const difference = comparePngPixels(
+      PNG.sync.write(image([18, 52, 171, 128])),
+      PNG.sync.write(image([18, 52, 171, 129])),
+    );
+    expect(difference.materialChangedPixels).toBe(1);
+  });
+  it("半透明でも白背景で1段階を超える色変化を検出する", () => {
+    const difference = comparePngPixels(
+      PNG.sync.write(image([18, 52, 171, 128])),
+      PNG.sync.write(image([22, 52, 171, 128])),
+    );
+    expect(difference.maxVisibleDifference).toBe(2);
+    expect(difference.materialChangedPixels).toBe(1);
   });
 });
