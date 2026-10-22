@@ -5,7 +5,7 @@ export type Route =
   | "character-edit"
   | "new"
   | "draw"
-  | "work-missing"
+  | "work"
   | "data"
   | "not-found";
 export function resolveRoute(hash: string): Route {
@@ -16,9 +16,17 @@ export function resolveRoute(hash: string): Route {
   if (/^\/characters\/[^/]+$/.test(path)) return "character-edit";
   if (path === "/new") return "new";
   if (/^\/draw\/[^/]+$/.test(path)) return "draw";
-  if (/^\/works\/[^/]+$/.test(path)) return "work-missing";
+  if (/^\/works\/[^/]+$/.test(path)) return "work";
   if (path === "/settings/data") return "data";
   return "not-found";
+}
+export function workIdFromHash(hash: string): string | undefined {
+  const match = /^#?\/works\/([^/]+)$/.exec(hash);
+  try {
+    return match ? decodeURIComponent(match[1]) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export function characterIdFromHash(hash: string): string | undefined {

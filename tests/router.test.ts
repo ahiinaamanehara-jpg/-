@@ -10,7 +10,7 @@ describe("ハッシュルート", () => {
     ["#/new", "new"],
     ["#/draw/new", "draw"],
     ["#/draw/missing", "draw"],
-    ["#/works/missing", "work-missing"],
+    ["#/works/missing", "work"],
     ["#/settings/data", "data"],
     ["#/unknown", "not-found"],
     ["#/new/extra", "not-found"],

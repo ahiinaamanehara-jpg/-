@@ -112,7 +112,7 @@ export function ReflectionSheet({
     !busyRef.current &&
     (!dirty ||
       window.confirm(
-        "入力した振り返りは保存されていません。破棄して描く画面を離れますか？",
+        "入力した振り返りは保存されていません。入力を破棄しますか？",
       ));
   const close = () => {
     if (canLeave()) onClose();
@@ -124,7 +124,7 @@ export function ReflectionSheet({
         !busyRef.current &&
         (!dirty ||
           window.confirm(
-            "入力した振り返りは保存されていません。破棄して描く画面を離れますか？",
+            "入力した振り返りは保存されていません。入力を破棄しますか？",
           )),
     };
     registerExitGuard(guard);
@@ -245,6 +245,25 @@ export function ReflectionSheet({
       [...seen, ...context.reflections.map((r) => r.questionId)],
       !!context.artwork.characterId,
     );
+  const skip = () => {
+    if (
+      busyRef.current ||
+      (dirty &&
+        !window.confirm(
+          "入力した回答は保存されていません。この質問をスキップしますか？",
+        ))
+    )
+      return;
+    if (additional) openQuestion(additional.id);
+    else {
+      setForm(undefined);
+      setView("history");
+      setError("");
+      setNotice(
+        "この質問への回答は保存していません。用意した質問はここまでです。",
+      );
+    }
+  };
   const comparisonAvailable =
     context &&
     context.previous.length > 0 &&
@@ -375,8 +394,8 @@ export function ReflectionSheet({
               <button className="primary" type="submit">
                 {busy ? "保存しています…" : "回答を保存"}
               </button>
-              <button type="button" onClick={close}>
-                この質問はスキップ
+              <button type="button" onClick={skip}>
+                この質問をスキップ
               </button>
             </div>
           </fieldset>
@@ -470,7 +489,7 @@ export function ReflectionSheet({
       )}
       {busy && <p role="status">振り返りを保存しています…</p>}
       <button className="reflection-return" disabled={busy} onClick={close}>
-        描く画面に戻る
+        振り返りを終える
       </button>
     </Sheet>
   );

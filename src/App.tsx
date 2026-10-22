@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { resolveRoute, characterIdFromHash, draftIdFromHash } from "./router";
+import {
+  resolveRoute,
+  characterIdFromHash,
+  draftIdFromHash,
+  workIdFromHash,
+} from "./router";
+import { Gallery, WorkDetail } from "./features/gallery/GalleryPages";
+import { DataManagement } from "./features/data/DataManagement";
 import { Sheet } from "./components/Sheet";
 import {
   checkWorkshopStorage,
@@ -23,6 +30,8 @@ export function App() {
   const route = resolveRoute(hash);
   const characterId = characterIdFromHash(hash);
   const draftId = draftIdFromHash(hash);
+  const workId = workIdFromHash(hash);
+  const [missingWorkId, setMissingWorkId] = useState<string>();
   const [missingDraftId, setMissingDraftId] = useState<string>();
   const [missingId, setMissingId] = useState<string>();
   const [notice, setNotice] = useState("");
@@ -127,7 +136,7 @@ export function App() {
       draftId && missingDraftId === draftId
         ? "作品が見つかりません"
         : "あなたの創作スペース",
-    "work-missing": "作品が見つかりません",
+    work: missingWorkId === workId ? "作品が見つかりません" : "作品を見返す",
     data: "データと安心のこと",
     "not-found": "ページが見つかりません",
   };
@@ -181,7 +190,13 @@ export function App() {
               <br />
               短い落書きも、途中の一枚も、あなたの作品です。
             </p>
+            <p>
+              <a className="button primary" href="#/new">
+                新しく描く
+              </a>
+            </p>
             <ResumePreparation />
+            <Gallery />
             <section className="hero">
               <div className="paper-art" aria-hidden="true">
                 <span>すき</span>
@@ -189,7 +204,7 @@ export function App() {
                 <b>✎</b>
               </div>
               <div>
-                <h2>まだ白紙の、あなたの棚</h2>
+                <h2>次の一枚を、ここから</h2>
                 <p>
                   好きなキャラクターや、ふと思いついたもの。
                   <br />
@@ -235,6 +250,13 @@ export function App() {
         {route === "draw" && (
           <DrawingPage key={hash} id={draftId} onMissing={setMissingDraftId} />
         )}
+        {route === "work" && (
+          <WorkDetail
+            key={hash}
+            id={workId ?? "invalid-id"}
+            onMissing={setMissingWorkId}
+          />
+        )}
         {route === "data" && (
           <section className="card">
             <h2>作品は、あなたの端末に</h2>
@@ -247,11 +269,12 @@ export function App() {
             </p>
             <button onClick={() => setSheet(true)}>保存の仕組みを読む</button>
             <p className="note">
-              推しの名前・メモ・参考画像と、作品画像・テーマ・振り返りを保存できます。全件バックアップ・復元は後の工程で追加します。
+              推しの名前・メモ・参考画像と、作品画像・テーマ・振り返りを保存できます。バックアップはこの端末に書き出します。
             </p>
+            <DataManagement />
           </section>
         )}
-        {["not-found", "work-missing"].includes(route) && (
+        {route === "not-found" && (
           <section className="card">
             <p>URLが違うか、まだ登録されていないデータです。</p>
             <a className="button primary" href="#/">
@@ -278,7 +301,7 @@ export function App() {
             サイトデータの削除、プライベートブラウズ、端末やURLの変更でデータが失われる場合があります。端末内保存は、永久保存の保証ではありません。
           </p>
           <p>
-            作品はPNGで書き出せます。推しやメモを含めた全データのバックアップは後の工程で用意します。
+            作品はPNGで書き出せます。推しやメモを含めた全データのバックアップはデータ管理からZIPで書き出せます。
           </p>
         </Sheet>
       )}

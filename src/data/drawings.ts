@@ -62,7 +62,7 @@ function makeAssets(bundle: DrawingBundle): ArtworkAsset[] {
     height: side,
   }));
 }
-function validateStoredImage(
+export function validateStoredImage(
   asset: StoredAsset | undefined,
   id: string,
   kind: ArtworkAsset["kind"],
@@ -175,15 +175,25 @@ export async function createDrawingCopy(
   bundle: DrawingBundle,
   tools: DrawingTools,
   expectedRevision?: number,
+  fallback?: ArtworkDraft,
 ): Promise<ArtworkDraft> {
   await validateBundle(bundle, tools);
   const db = await openWorkshopDB();
   try {
-    const tx = db.transaction(["artworks", "assets", "settings"], "readwrite");
+    const tx = db.transaction(
+      ["artworks", "assets", "settings", "characters"],
+      "readwrite",
+    );
     const operation = (async () => {
       const raw = await tx.objectStore("artworks").get(sourceId);
-      if (!raw) throw new DrawingConflictError();
-      const source = validateArtworkDraft(raw);
+      if (
+        !raw &&
+        (!fallback ||
+          expectedRevision !== undefined ||
+          fallback.id !== sourceId)
+      )
+        throw new DrawingConflictError();
+      const source = validateArtworkDraft(raw ?? fallback!);
       if (
         expectedRevision !== undefined &&
         source.revision !== expectedRevision
@@ -199,10 +209,16 @@ export async function createDrawingCopy(
         canvasAssetId: bitmap.id,
         thumbnailAssetId: thumbnail.id,
         tools: { ...tools },
+        status: "in-progress",
         createdAt: now,
         updatedAt: now,
         revision: 1,
       };
+      if (
+        draft.characterId &&
+        !(await tx.objectStore("characters").get(draft.characterId))
+      )
+        delete draft.characterId;
       await tx.objectStore("artworks").add(draft);
       await tx
         .objectStore("settings")

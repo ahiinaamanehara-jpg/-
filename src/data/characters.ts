@@ -27,7 +27,7 @@ export class CharacterValidationError extends Error {
 function validDate(value: unknown): value is string {
   return typeof value === "string" && Number.isFinite(Date.parse(value));
 }
-function validateCharacter(value: Character): Character {
+export function validateCharacter(value: Character): Character {
   if (
     !value ||
     typeof value.id !== "string" ||

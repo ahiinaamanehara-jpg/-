@@ -373,6 +373,8 @@ function DrawingEditor({ data }: { data: DrawingData }) {
         controller.draft.id,
         bundle,
         controller.tools,
+        undefined,
+        controller.draft,
       );
       allowLeave.current = true;
       window.location.hash = `/draw/${next.id}`;
@@ -592,14 +594,31 @@ function DrawingEditor({ data }: { data: DrawingData }) {
         <div role="alert" className="error">
           <p>{saveState.error}</p>
           {data.draft && (
-            <button
-              disabled={disabled}
-              onClick={() => {
-                void copy();
-              }}
-            >
-              今の絵を別の作品として保存
-            </button>
+            <>
+              <button
+                disabled={disabled}
+                onClick={() => {
+                  void copy();
+                }}
+              >
+                今の絵を別の作品として保存
+              </button>
+              <button
+                disabled={disabled}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "画面の未保存の絵を破棄して、最新の保存内容を読み直しますか？必要な絵は先にPNGを書き出してください。",
+                    )
+                  ) {
+                    allowLeave.current = true;
+                    window.location.reload();
+                  }
+                }}
+              >
+                最新の保存を読み直す
+              </button>
+            </>
           )}
         </div>
       )}
@@ -708,6 +727,16 @@ function DrawingEditor({ data }: { data: DrawingData }) {
       <a className="button" href="#/new">
         別のテーマで準備する
       </a>
+      {data.draft && (
+        <p>
+          <a
+            className="button"
+            href={`#/works/${encodeURIComponent(data.draft.id)}`}
+          >
+            作品の詳細を見る
+          </a>
+        </p>
+      )}
       {overlay === "hints" && (
         <HintSheet onClose={() => setOverlay(undefined)} />
       )}

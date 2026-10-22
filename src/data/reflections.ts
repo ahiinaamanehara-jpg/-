@@ -28,6 +28,9 @@ export function validateReflection(value: Reflection): Reflection {
     typeof value.artworkId !== "string" ||
     !value.artworkId ||
     !question ||
+    (value.comparisonUnavailable !== undefined &&
+      (value.comparisonUnavailable !== true ||
+        value.questionId !== "change")) ||
     typeof value.text !== "string" ||
     value.text.length > 2000 ||
     !(
@@ -171,6 +174,10 @@ export async function saveReflection(
         choice: input.choice,
         ...(input.comparedArtworkId
           ? { comparedArtworkId: input.comparedArtworkId }
+          : {}),
+        ...(previous?.comparisonUnavailable &&
+        previous.comparedArtworkId === input.comparedArtworkId
+          ? { comparisonUnavailable: true as const }
           : {}),
         createdAt: previous?.createdAt ?? now,
         updatedAt: now,

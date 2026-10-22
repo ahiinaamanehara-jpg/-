@@ -179,14 +179,76 @@ test("通常保存では質問を強制せず、1問をスキップしても絵�
     "今回はどんなイラストが描けた？",
   );
   await dialog
-    .getByRole("button", { name: "この質問はスキップ", exact: true })
+    .getByRole("button", { name: "この質問をスキップ", exact: true })
     .click();
+  await expect(dialog.getByRole("heading", { level: 3 })).toHaveText(
+    "今回、描いていて一番楽しかったのは？",
+  );
   expect((await records(page)).reflections).toHaveLength(0);
+  await dialog
+    .getByRole("button", { name: "振り返りを終える", exact: true })
+    .click();
   await page.reload();
   await expect(
     page.getByRole("button", { name: "ペン", exact: true }),
   ).toBeEnabled();
   expect(await image(page)).toBe(before);
+});
+
+test("スキップを繰り返しても質問を循環せず、最後は閉じずに終了を案内する", async ({
+  page,
+}) => {
+  await start(page);
+  const dialog = await open(page);
+  const questions = new Set<string>();
+  for (let i = 0; i < 6; i++) {
+    const text = (await dialog
+      .getByRole("heading", { level: 3 })
+      .textContent())!;
+    expect(questions.has(text)).toBe(false);
+    questions.add(text);
+    await dialog
+      .getByRole("button", { name: "この質問をスキップ", exact: true })
+      .click();
+  }
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("group", { name: "今回の質問", exact: true }),
+  ).toHaveCount(0);
+  await expect(dialog.getByRole("status")).toContainText("ここまで");
+  expect((await records(page)).reflections).toHaveLength(0);
+  await dialog
+    .getByRole("button", { name: "振り返りを終える", exact: true })
+    .click();
+  await expect(dialog).not.toBeVisible();
+});
+
+test("入力済みの質問をスキップするか本人が選べ、未保存の回答を次へ持ち越さない", async ({
+  page,
+}) => {
+  await start(page);
+  const dialog = await open(page);
+  await dialog
+    .getByLabel("自由に書く（任意）", { exact: true })
+    .fill("まだ答えかけ");
+  page.once("dialog", (d) => d.dismiss());
+  await dialog
+    .getByRole("button", { name: "この質問をスキップ", exact: true })
+    .click();
+  await expect(
+    dialog.getByLabel("自由に書く（任意）", { exact: true }),
+  ).toHaveValue("まだ答えかけ");
+  page.once("dialog", (d) => d.accept());
+  await dialog
+    .getByRole("button", { name: "この質問をスキップ", exact: true })
+    .click();
+  await expect(dialog.getByRole("heading", { level: 3 })).toHaveText(
+    "今回、描いていて一番楽しかったのは？",
+  );
+  await expect(
+    dialog.getByLabel("自由に書く（任意）", { exact: true }),
+  ).toHaveValue("");
+  expect((await records(page)).reflections).toHaveLength(0);
 });
 
 test("絵の保存が失敗したら質問を開かず、絵を保って保存を再試行できる", async ({
@@ -294,7 +356,7 @@ test("2000文字とHTML風入力を保持し、後日編集・削除しても作
   await expect(dialog.getByText(text, { exact: true })).toBeVisible();
   await expect(dialog.locator("img")).toHaveCount(0);
   await dialog
-    .getByRole("button", { name: "描く画面に戻る", exact: true })
+    .getByRole("button", { name: "振り返りを終える", exact: true })
     .click();
   await page.reload();
   await expect(
@@ -417,7 +479,7 @@ test("不正な保存回答を自動削除せず、閉じて描画を続けら�
     dialog.getByRole("group", { name: "今回の質問", exact: true }),
   ).toHaveCount(0);
   await dialog
-    .getByRole("button", { name: "描く画面に戻る", exact: true })
+    .getByRole("button", { name: "振り返りを終える", exact: true })
     .click();
   await page.evaluate(
     () =>
@@ -465,7 +527,7 @@ test("別作品に回答を引き継がず、振り返り後も競合せず描�
     dialog.getByRole("group", { name: "今回の質問", exact: true }),
   ).toHaveCount(0);
   await dialog
-    .getByRole("button", { name: "描く画面に戻る", exact: true })
+    .getByRole("button", { name: "振り返りを終える", exact: true })
     .click();
   await draw(page, 0.7);
   await saved(page);
@@ -479,7 +541,10 @@ test("別作品に回答を引き継がず、振り返り後も競合せず描�
     dialog.getByText("元の作品の振り返り", { exact: true }),
   ).toHaveCount(0);
   await dialog
-    .getByRole("button", { name: "この質問はスキップ", exact: true })
+    .getByRole("button", { name: "この質問をスキップ", exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: "振り返りを終える", exact: true })
     .click();
   await page.goto(original);
   dialog = await open(page);
@@ -536,7 +601,7 @@ test.describe("スマートフォンの振り返り操作", () => {
       fullPage: true,
     });
     await dialog
-      .getByRole("button", { name: "描く画面に戻る", exact: true })
+      .getByRole("button", { name: "振り返りを終える", exact: true })
       .tap();
     await page.reload();
     await expect(
@@ -687,7 +752,7 @@ test("過去作品なし・推しなしでは比較を勧めず、ヒントは�
     }),
   ).toHaveCount(0);
   await dialog
-    .getByRole("button", { name: "描く画面に戻る", exact: true })
+    .getByRole("button", { name: "振り返りを終える", exact: true })
     .click();
   await page.goto("#/draw/new");
   await expect(

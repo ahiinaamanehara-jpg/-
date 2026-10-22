@@ -41,7 +41,7 @@ export interface ArtworkDraft {
   characterId?: string;
   theme: string;
   themeCategory: ThemeCategory | null;
-  status: "in-progress";
+  status: "in-progress" | "finished";
   canvasAssetId?: string;
   thumbnailAssetId?: string;
   tools?: DrawingTools;
@@ -84,7 +84,7 @@ export function validateArtworkDraft(value: ArtworkDraft): ArtworkDraft {
       value.themeCategory === null ||
       ["expression", "costume", "pose", "free"].includes(value.themeCategory)
     ) ||
-    value.status !== "in-progress" ||
+    !["in-progress", "finished"].includes(value.status) ||
     (value.canvasAssetId !== undefined &&
       (typeof value.canvasAssetId !== "string" || !value.canvasAssetId)) ||
     (value.thumbnailAssetId !== undefined &&
@@ -116,7 +116,24 @@ export class StorageBlockedError extends Error {
   }
 }
 
+// IDBは同じDBへのopenを直列に処理するため、先頭がblockedになると
+// 後続のopenにはblockedイベントすら届かない。同時に開いている呼出しへ共有する。
+const pendingOpens = new Map<
+  string,
+  {
+    error?: StorageBlockedError;
+    rejectors: Set<(error: StorageBlockedError) => void>;
+  }
+>();
+
 export async function openWorkshopDB(name = "suki-sketch") {
+  let group = pendingOpens.get(name);
+  if (group?.error) throw group.error;
+  if (!group) {
+    group = { rejectors: new Set() };
+    pendingOpens.set(name, group);
+  }
+  const currentGroup = group;
   const connection: { current?: IDBPDatabase<WorkshopDB> } = {};
   let abandoned = false;
   let upgradeFailure: unknown;
@@ -124,83 +141,96 @@ export async function openWorkshopDB(name = "suki-sketch") {
   const blocked = new Promise<never>((_, reject) => {
     rejectBlocked = reject;
   });
-  const opening = openDB<WorkshopDB>(name, 4, {
-    upgrade(db, oldVersion, _newVersion, tx) {
-      try {
-        if (abandoned) {
-          tx.abort();
-          return;
-        }
-        if (oldVersion === 0) {
-          db.createObjectStore("settings", { keyPath: "key" });
-        } else {
-          // 不整合なv1を勝手に初期化せず、移行トランザクションごと中止する。
-          if (!db.objectStoreNames.contains("settings"))
-            throw new StorageSchemaError();
-          const settings = tx.objectStore("settings");
-          if (settings.keyPath !== "key" || settings.autoIncrement)
-            throw new StorageSchemaError();
-        }
-        if (oldVersion < 2) {
-          if (
-            db.objectStoreNames.contains("characters") ||
-            db.objectStoreNames.contains("assets")
-          )
-            throw new StorageSchemaError();
-          db.createObjectStore("characters", { keyPath: "id" });
-          db.createObjectStore("assets", { keyPath: "id" });
-        } else {
-          // 旧v2が不整合なら、artworksを追加する前に移行全体を中止する。
-          for (const name of ["characters", "assets"] as const) {
-            if (!db.objectStoreNames.contains(name))
+  const rejectOpening = (error: StorageBlockedError) => {
+    abandoned = true;
+    rejectBlocked(error);
+  };
+  currentGroup.rejectors.add(rejectOpening);
+  const release = () => {
+    currentGroup.rejectors.delete(rejectOpening);
+    if (!currentGroup.rejectors.size) pendingOpens.delete(name);
+  };
+  const opening = Promise.resolve().then(() =>
+    openDB<WorkshopDB>(name, 4, {
+      upgrade(db, oldVersion, _newVersion, tx) {
+        try {
+          if (abandoned) {
+            tx.abort();
+            return;
+          }
+          if (oldVersion === 0) {
+            db.createObjectStore("settings", { keyPath: "key" });
+          } else {
+            // 不整合なv1を勝手に初期化せず、移行トランザクションごと中止する。
+            if (!db.objectStoreNames.contains("settings"))
               throw new StorageSchemaError();
-            const store = tx.objectStore(name);
-            if (store.keyPath !== "id" || store.autoIncrement)
+            const settings = tx.objectStore("settings");
+            if (settings.keyPath !== "key" || settings.autoIncrement)
               throw new StorageSchemaError();
           }
+          if (oldVersion < 2) {
+            if (
+              db.objectStoreNames.contains("characters") ||
+              db.objectStoreNames.contains("assets")
+            )
+              throw new StorageSchemaError();
+            db.createObjectStore("characters", { keyPath: "id" });
+            db.createObjectStore("assets", { keyPath: "id" });
+          } else {
+            // 旧v2が不整合なら、artworksを追加する前に移行全体を中止する。
+            for (const name of ["characters", "assets"] as const) {
+              if (!db.objectStoreNames.contains(name))
+                throw new StorageSchemaError();
+              const store = tx.objectStore(name);
+              if (store.keyPath !== "id" || store.autoIncrement)
+                throw new StorageSchemaError();
+            }
+          }
+          if (oldVersion < 3) {
+            if (db.objectStoreNames.contains("artworks"))
+              throw new StorageSchemaError();
+            db.createObjectStore("artworks", { keyPath: "id" });
+          } else {
+            if (!db.objectStoreNames.contains("artworks"))
+              throw new StorageSchemaError();
+            const artworks = tx.objectStore("artworks");
+            if (artworks.keyPath !== "id" || artworks.autoIncrement)
+              throw new StorageSchemaError();
+          }
+          if (oldVersion < 4) {
+            if (db.objectStoreNames.contains("reflections"))
+              throw new StorageSchemaError();
+            const reflections = db.createObjectStore("reflections", {
+              keyPath: "id",
+            });
+            reflections.createIndex("by-artwork", "artworkId");
+            reflections.createIndex(
+              "by-question",
+              ["artworkId", "questionId"],
+              {
+                unique: true,
+              },
+            );
+          }
+        } catch (error) {
+          upgradeFailure = error;
+          tx.abort();
         }
-        if (oldVersion < 3) {
-          if (db.objectStoreNames.contains("artworks"))
-            throw new StorageSchemaError();
-          db.createObjectStore("artworks", { keyPath: "id" });
-        } else {
-          if (!db.objectStoreNames.contains("artworks"))
-            throw new StorageSchemaError();
-          const artworks = tx.objectStore("artworks");
-          if (artworks.keyPath !== "id" || artworks.autoIncrement)
-            throw new StorageSchemaError();
-        }
-        if (oldVersion < 4) {
-          if (db.objectStoreNames.contains("reflections"))
-            throw new StorageSchemaError();
-          const reflections = db.createObjectStore("reflections", {
-            keyPath: "id",
-          });
-          reflections.createIndex("by-artwork", "artworkId");
-          reflections.createIndex("by-question", ["artworkId", "questionId"], {
-            unique: true,
-          });
-        }
-      } catch (error) {
-        upgradeFailure = error;
-        tx.abort();
-      }
-    },
-    blocked() {
-      abandoned = true;
-      rejectBlocked(new StorageBlockedError());
-    },
-    blocking() {
-      connection.current?.close();
-    },
-  });
-  // blockedで戻った後に接続が開いても保持しない。遅延した移行も上で中止する。
-  void opening.then(
-    (db) => {
-      if (abandoned) db.close();
-    },
-    () => {},
+      },
+      blocked() {
+        currentGroup.error ??= new StorageBlockedError();
+        for (const reject of currentGroup.rejectors) reject(currentGroup.error);
+      },
+      blocking() {
+        connection.current?.close();
+      },
+    }),
   );
+  // blockedで戻った後に接続が開いても保持しない。遅延した移行も上で中止する。
+  void opening.then((db) => {
+    if (abandoned) db.close();
+    release();
+  }, release);
   let db: IDBPDatabase<WorkshopDB>;
   try {
     db = await Promise.race([opening, blocked]);

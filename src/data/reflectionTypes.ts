@@ -7,6 +7,7 @@ export interface Reflection {
   text: string;
   choice: string | null;
   comparedArtworkId?: string;
+  comparisonUnavailable?: true;
   createdAt: string;
   updatedAt: string;
   revision: number;
