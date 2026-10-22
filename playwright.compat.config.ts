@@ -4,7 +4,11 @@ import base from "./playwright.config";
 // 利用可能なブラウザーを明示的に実行する。未導入を成功やスキップにしない。
 export default defineConfig({
   ...base,
-  testMatch: ["**/acceptance.spec.ts", "**/accessibility.spec.ts"],
+  testMatch: [
+    "**/acceptance.spec.ts",
+    "**/accessibility.spec.ts",
+    "**/compatibility-storage.spec.ts",
+  ],
   outputDir: "./test-results/compat",
   forbidOnly: Boolean(process.env.CI),
   retries: 0,

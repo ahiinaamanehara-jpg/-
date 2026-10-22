@@ -1,5 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFile, writeFile } from "node:fs/promises";
+import {
+  observeStorageErrors,
+  expectSaved,
+  expectCharacterSaved,
+} from "./support/storageDiagnostics";
+
+test.beforeEach(async ({ page }) => observeStorageErrors(page));
 
 async function picture(page: Page) {
   return Buffer.from(
@@ -97,6 +104,7 @@ for (const withReference of [false, true]) {
     await page
       .getByRole("button", { name: "登録して保存", exact: true })
       .click();
+    await expectCharacterSaved(page);
     await page
       .getByRole("button", { name: "この推しを選ぶ", exact: true })
       .click();
@@ -139,7 +147,7 @@ for (const withReference of [false, true]) {
       expect(await pixels(page)).toBe(drawn);
     }
     await page.getByRole("button", { name: "途中で保存", exact: true }).click();
-    await expect(page.locator(".save-status")).toHaveText("保存済み");
+    await expectSaved(page);
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await page
       .getByRole("button", { name: "振り返る（任意）", exact: true })

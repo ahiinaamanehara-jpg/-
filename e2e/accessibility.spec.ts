@@ -1,6 +1,12 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { writeFile } from "node:fs/promises";
+import {
+  observeStorageErrors,
+  expectSaved,
+} from "./support/storageDiagnostics";
+
+test.beforeEach(async ({ page }) => observeStorageErrors(page));
 
 async function prepare(page: Page) {
   await page.goto("#/characters/new");
@@ -24,7 +30,7 @@ async function prepare(page: Page) {
     page.getByRole("button", { name: "ペン", exact: true }),
   ).toBeEnabled();
   await page.getByRole("button", { name: "途中で保存", exact: true }).click();
-  await expect(page.locator(".save-status")).toHaveText("保存済み");
+  await expectSaved(page);
   const draw = new URL(page.url()).hash;
   return { draw, detail: draw.replace("#/draw/", "#/works/") };
 }

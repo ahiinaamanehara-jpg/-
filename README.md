@@ -76,7 +76,7 @@ npm run test:e2e:compat
 
 特定のエンジンだけなら`npm run test:e2e:compat -- --project=firefox`等を指定します。未導入のエンジンは実行に失敗し、成功やスキップとして扱いません。このクラウドではブラウザーの取得先が通信制限の対象です。
 
-[Check browser compatibility](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/compatibility.yml)は、mainのアプリ・E2E・関連設定の変更時にChromium／Firefox／WebKitを別々のジョブで確認します。Actionsから手動実行もできます。1エンジンにつき全体フロー2件とアクセシビリティ3件を実行し、自動再試行で失敗を隠しません。サイトの配信やユーザーの保存データには触れません。
+[Check browser compatibility](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/compatibility.yml)は、mainのアプリ・E2E・関連設定の変更時にChromium／Firefox／WebKitを別々のジョブで確認します。Actionsから手動実行もできます。1エンジンにつき全体フロー2件・アクセシビリティ3件・永続プロファイルでの保存復帰1件を実行し、自動再試行で失敗を隠しません。サイトの配信やユーザーの保存データには触れません。
 
 結果は各ジョブと7日間保存する`compatibility-ブラウザー名`のArtifactsで確認できます。JSON集計・通信記録・機械検査結果と、失敗時の画面・操作トレースを含みます。ローカルの互換性テストは`test-results/compat/`へ出力し、通常E2Eや5分描画の記録を消しません。モバイルWebKitはローカル設定に残し、CIの対象には含めません。最新の実行結果は[テスト記録](docs/TEST_PLAN.md)を参照してください。
 
