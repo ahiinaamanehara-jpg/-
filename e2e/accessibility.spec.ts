@@ -1,4 +1,5 @@
-import { expect, test, type Page, type Locator } from "@playwright/test";
+import { expect, type Page, type Locator } from "@playwright/test";
+import { test } from "./support/persistentTest";
 import AxeBuilder from "@axe-core/playwright";
 import { writeFile } from "node:fs/promises";
 import {
@@ -54,11 +55,29 @@ async function audit(page: Page, name: string) {
   };
 }
 async function byKeyboard(page: Page, target: Locator) {
+  await page.bringToFront();
+  const visited: string[] = [];
   for (let i = 0; i < 80; i++) {
     if (await target.evaluate((el) => el === document.activeElement)) return;
     await page.keyboard.press("Tab");
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    );
+    visited.push(
+      await page.evaluate(
+        () =>
+          `${document.activeElement?.tagName}: ${document.activeElement?.textContent?.trim().slice(0, 80)}`,
+      ),
+    );
   }
-  await expect(target).toBeFocused();
+  await expect(
+    target,
+    JSON.stringify({
+      visited,
+      hasFocus: await page.evaluate(() => document.hasFocus()),
+    }),
+  ).toBeFocused();
 }
 
 test("主要画面と任意・削除シートのラベル・コントラストを検査する", async ({

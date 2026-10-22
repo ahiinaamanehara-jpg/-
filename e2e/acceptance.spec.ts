@@ -1,10 +1,12 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./support/persistentTest";
 import { readFile, writeFile } from "node:fs/promises";
 import {
   observeStorageErrors,
   expectSaved,
   expectCharacterSaved,
 } from "./support/storageDiagnostics";
+import { expectCanvasUnchanged } from "./support/canvasSnapshot";
 
 test.beforeEach(async ({ page }) => observeStorageErrors(page));
 
@@ -185,10 +187,10 @@ for (const withReference of [false, true]) {
     await page.getByRole("link", { name: "続きを描く", exact: true }).click();
     await expect(page).toHaveURL(url);
     await expect(pen).toBeEnabled();
-    expect(await pixels(page)).toBe(drawn);
+    await expectCanvasUnchanged(page, drawn);
     await page.reload();
     await expect(pen).toBeEnabled();
-    expect(await pixels(page)).toBe(drawn);
+    await expectCanvasUnchanged(page, drawn);
     await page
       .getByRole("link", { name: "作品の詳細を見る", exact: true })
       .click();

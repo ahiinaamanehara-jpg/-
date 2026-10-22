@@ -78,6 +78,8 @@ npm run test:e2e:compat
 
 [Check browser compatibility](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/compatibility.yml)は、mainのアプリ・E2E・関連設定の変更時にChromium／Firefox／WebKitを別々のジョブで確認します。Actionsから手動実行もできます。1エンジンにつき全体フロー2件・アクセシビリティ3件・永続プロファイルでの保存復帰1件を実行し、自動再試行で失敗を隠しません。サイトの配信やユーザーの保存データには触れません。
 
+WebKitの共通フローはテスト専用の永続プロファイルで実行します。隔離領域でBlob保存が拒否される場合の絵の保持とPNG退避も検証します。画像比較用のpngjsは開発専用です。
+
 結果は各ジョブと7日間保存する`compatibility-ブラウザー名`のArtifactsで確認できます。JSON集計・通信記録・機械検査結果と、失敗時の画面・操作トレースを含みます。ローカルの互換性テストは`test-results/compat/`へ出力し、通常E2Eや5分描画の記録を消しません。モバイルWebKitはローカル設定に残し、CIの対象には含めません。最新の実行結果は[テスト記録](docs/TEST_PLAN.md)を参照してください。
 
 E2Eには全体フロー・7種類の画面幅・Android／iPad相当の表示と入力エミュレーション・axe-coreの検査を含めます。機械検査では判断できない項目を含むため、WCAG適合や実機確認済みを意味しません。実行結果は`test-results/`、5分描画の記録は`test-results/long/`へ出力します。
