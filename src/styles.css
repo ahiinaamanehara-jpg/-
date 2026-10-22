@@ -7,7 +7,7 @@
     sans-serif;
   color: #39352e;
   background: #faf6ef;
-  font-size: 16px;
+  font-size: 100%;
   line-height: 1.8;
   font-synthesis: none;
 }
@@ -73,19 +73,19 @@ header {
   display: flex;
   gap: 12px;
   align-items: center;
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   text-decoration: none;
   color: #4d4437;
 }
 .brand small {
   display: block;
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 400;
   letter-spacing: 0.08em;
 }
 .badge {
-  font-size: 12px;
+  font-size: 0.75rem;
   background: #ebe4d6;
   border-radius: 20px;
   padding: 4px 12px;
@@ -100,7 +100,7 @@ nav {
   flex-wrap: wrap;
 }
 nav a {
-  font-size: 14px;
+  font-size: 0.875rem;
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -115,14 +115,15 @@ main {
   margin: auto;
   padding: 48px 24px 64px;
   min-height: 65vh;
+  overflow-wrap: anywhere;
 }
 .eyebrow {
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.2em;
   color: #76624f;
 }
 h1 {
-  font-size: clamp(26px, 4vw, 38px);
+  font-size: 2.375rem;
   line-height: 1.45;
   margin: 12px 0 20px;
   font-weight: 650;
@@ -132,7 +133,8 @@ h1:focus {
   outline: none;
 }
 h2 {
-  font-size: 21px;
+  overflow-wrap: anywhere;
+  font-size: 1.3125rem;
   font-weight: 650;
   margin: 0 0 12px;
 }
@@ -165,7 +167,7 @@ h2 {
   place-items: center;
 }
 .paper-art span {
-  font-size: 44px;
+  font-size: 2.75rem;
   font-family: serif;
   color: #876141;
   transform: rotate(8deg);
@@ -174,14 +176,14 @@ h2 {
   position: absolute;
   top: 12px;
   right: 20px;
-  font-size: 32px;
+  font-size: 2rem;
   color: #7b7d54;
 }
 .paper-art b {
   position: absolute;
   bottom: 5px;
   right: 15px;
-  font-size: 50px;
+  font-size: 3.125rem;
   color: #8c6650;
 }
 .actions {
@@ -190,7 +192,7 @@ h2 {
   flex-wrap: wrap;
 }
 .note {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: #6b6052;
   margin-top: 20px;
 }
@@ -206,7 +208,7 @@ h2 {
   border-radius: 20px;
 }
 .empty-icon {
-  font-size: 42px;
+  font-size: 2.625rem;
   color: #91644c;
 }
 .field {
@@ -216,7 +218,7 @@ h2 {
   margin: 20px 0;
 }
 .field p {
-  font-size: 14px;
+  font-size: 0.875rem;
   margin: 0;
   color: #6b6052;
 }
@@ -258,7 +260,7 @@ textarea {
   padding: 24px;
 }
 .canvas-placeholder span {
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .back {
   margin-top: 24px;
@@ -266,7 +268,7 @@ textarea {
 footer {
   padding: 24px;
   text-align: center;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #6b6052;
   border-top: 1px solid #ded5c7;
 }
@@ -292,7 +294,7 @@ dialog::backdrop {
   justify-content: space-between;
 }
 .sheet-heading h2 {
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 .skip {
   position: absolute;
@@ -305,15 +307,23 @@ dialog::backdrop {
 .skip:focus {
   top: 12px;
 }
+@media (min-width: 601px) and (max-width: 900px) {
+  h1 {
+    font-size: 2rem;
+  }
+}
 @media (max-width: 600px) {
+  h1 {
+    font-size: 1.625rem;
+  }
   header {
     padding: 18px 16px;
   }
   .brand {
-    font-size: 18px;
+    font-size: 1.125rem;
   }
   .brand small {
-    font-size: 10px;
+    font-size: 0.625rem;
   }
   nav {
     gap: 16px;
@@ -332,7 +342,7 @@ dialog::backdrop {
     margin: auto;
   }
   .paper-art span {
-    font-size: 34px;
+    font-size: 2.125rem;
   }
   .actions {
     flex-direction: column;
@@ -350,7 +360,7 @@ dialog::backdrop {
     padding: 22px;
   }
   h2 {
-    font-size: 19px;
+    font-size: 1.1875rem;
   }
 }
 .character-grid {
@@ -438,7 +448,7 @@ fieldset {
   min-width: 0;
 }
 input[type="file"] {
-  font-size: 14px;
+  font-size: 0.875rem;
   max-width: 100%;
 }
 input[type="file"]::file-selector-button {
@@ -536,13 +546,13 @@ textarea {
   margin: 0 0 24px;
 }
 .draft-summary dt {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: #6b6052;
   margin-top: 14px;
 }
 .draft-summary dd {
   margin: 6px 0 0;
-  font-size: 19px;
+  font-size: 1.1875rem;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -568,7 +578,7 @@ textarea {
 }
 .drawing-character {
   font-weight: 650;
-  font-size: 20px;
+  font-size: 1.25rem;
   margin: 0;
   overflow-wrap: anywhere;
 }
@@ -583,7 +593,7 @@ textarea {
   padding: 5px 12px;
   border-radius: 20px;
   margin: 0;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 .save-status.error {
   color: #8a2521;
@@ -720,7 +730,7 @@ textarea {
   min-width: 0;
 }
 .reflection-question {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 650;
   margin: 18px 0;
   overflow-wrap: anywhere;
@@ -797,7 +807,7 @@ textarea {
   min-width: 0;
 }
 .work-card h3 {
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 600;
   margin: 12px 0;
   overflow-wrap: anywhere;

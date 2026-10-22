@@ -5,4 +5,5 @@ export default defineConfig({
   ...base,
   testIgnore: [],
   testMatch: "**/drawing-long.spec.ts",
+  outputDir: "./test-results/long",
 });

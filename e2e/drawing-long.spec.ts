@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { writeFile } from "node:fs/promises";
 
 test("5分間の反復描画・定期保存・履歴上限・再開", async ({ page }, info) => {
   test.setTimeout(380_000);
@@ -85,8 +86,10 @@ test("5分間の反復描画・定期保存・履歴上限・再開", async ({ p
     eventToNextFrameP95Ms: frames[Math.floor(frames.length * 0.95)],
     note: "Chromiumのイベント受信から次のrequestAnimationFrameまで。実機の入力から画面表示までの遅延ではない。",
   };
+  const report = info.outputPath("drawing-stress.json");
+  await writeFile(report, JSON.stringify(stats, null, 2));
   await info.attach("drawing-stress.json", {
-    body: JSON.stringify(stats, null, 2),
+    path: report,
     contentType: "application/json",
   });
   console.log(JSON.stringify(stats));
