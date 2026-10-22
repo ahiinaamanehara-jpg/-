@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { resolveRoute, characterIdFromHash } from "./router";
+import { resolveRoute, characterIdFromHash, draftIdFromHash } from "./router";
 import { Sheet } from "./components/Sheet";
 import {
   checkWorkshopStorage,
@@ -9,9 +9,13 @@ import {
 import {
   CharactersPage,
   CharacterEditor,
-  SelectedCharacter,
   FreeStartLink,
 } from "./features/characters/CharacterPages";
+import {
+  ThemePage,
+  DraftPreparation,
+  ResumePreparation,
+} from "./features/themes/ThemePages";
 import { canNavigate } from "./navigation";
 export function App() {
   const [hash, setHash] = useState(window.location.hash);
@@ -21,6 +25,8 @@ export function App() {
   const activeHash = useRef(window.location.hash);
   const route = resolveRoute(hash);
   const characterId = characterIdFromHash(hash);
+  const draftId = draftIdFromHash(hash);
+  const [missingDraftId, setMissingDraftId] = useState<string>();
   const [missingId, setMissingId] = useState<string>();
   const [notice, setNotice] = useState("");
   useEffect(() => {
@@ -120,7 +126,10 @@ export function App() {
     "character-edit":
       missingId === characterId ? "推しが見つかりません" : "推しを編集する",
     new: "今日は、どんな姿に？",
-    draw: "あなたの創作スペース",
+    draw:
+      draftId && missingDraftId === draftId
+        ? "作品が見つかりません"
+        : "あなたの創作スペース",
     "work-missing": "作品が見つかりません",
     data: "データと安心のこと",
     "not-found": "ページが見つかりません",
@@ -175,6 +184,7 @@ export function App() {
               <br />
               短い落書きも、途中の一枚も、あなたの作品です。
             </p>
+            <ResumePreparation />
             <section className="hero">
               <div className="paper-art" aria-hidden="true">
                 <span>すき</span>
@@ -197,7 +207,7 @@ export function App() {
               </div>
             </section>
             <p className="note">
-              推しの登録・保存が使えるようになりました。描画・作品保存は、これから追加します。
+              推しと創作テーマを保存できます。描画・作品画像の保存は、これから追加します。
             </p>
             <section className="info">
               <h2>自分のペースで、大丈夫。</h2>
@@ -221,35 +231,13 @@ export function App() {
             onMissing={setMissingId}
           />
         )}
-        {route === "new" && (
-          <section className="card">
-            <SelectedCharacter />
-            <p>
-              テーマを決めても、決めなくても。自分のペースで始められる場所を準備しています。
-            </p>
-            <ul className="chips">
-              <li>表情</li>
-              <li>衣装・小物</li>
-              <li>ポーズ・場面</li>
-              <li>自由なアイデア</li>
-            </ul>
-            <p className="note">お題の提案・テーマ保存はM3で追加します。</p>
-            <a className="button primary" href="#/draw/new">
-              制作画面の準備を見る
-            </a>
-          </section>
-        )}
+        {route === "new" && <ThemePage />}
         {route === "draw" && (
-          <section className="card">
-            <div className="canvas-placeholder">
-              <p>ここに、あなたの一枚を。</p>
-              <span>キャンバスはM4で追加します。まだ描画できません。</span>
-            </div>
-            <p>
-              ペン・画像取込・途中保存は準備中です。講座を受けずに描けるようにします。
-            </p>
-            <a href="#/new">テーマ画面に戻る</a>
-          </section>
+          <DraftPreparation
+            key={hash}
+            id={draftId}
+            onMissing={setMissingDraftId}
+          />
         )}
         {route === "data" && (
           <section className="card">
@@ -263,7 +251,7 @@ export function App() {
             </p>
             <button onClick={() => setSheet(true)}>保存の仕組みを読む</button>
             <p className="note">
-              推しの名前・メモ・参考画像を保存できます。作品保存・バックアップ・復元は後の工程で追加します。
+              推しの名前・メモ・参考画像と、創作テーマの準備データを保存できます。作品画像の保存・バックアップ・復元は後の工程で追加します。
             </p>
           </section>
         )}

@@ -125,7 +125,7 @@ test("画像なしで2人を登録・編集・選択し再読込して復元す�
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "今日は、どんな姿に？",
   );
-  // テーマ選択そのものはM3。M2では推しを未選択で進む導線が保たれる。
+  // テーマ選択を追加した後も、推しを未選択で進む導線が保たれる。
   expect((await records(page)).characters).toHaveLength(2);
 });
 
@@ -355,7 +355,7 @@ test("容量不足の更新失敗で旧データ・画像と編集内容を保�
   ]);
 });
 
-test("v1の設定を保ったままv2へ移行する", async ({ page }) => {
+test("v1の設定を保ったままv3へ移行する", async ({ page }) => {
   await page.goto("#/settings/data");
   await expect(page.getByRole("status")).toContainText("利用できます");
   await page.evaluate(async () => {
@@ -401,8 +401,8 @@ test("v1の設定を保ったままv2へ移行する", async ({ page }) => {
       }),
   );
   expect(migrated).toEqual({
-    version: 2,
-    stores: ["assets", "characters", "settings"],
+    version: 3,
+    stores: ["artworks", "assets", "characters", "settings"],
     setting: "残す設定",
   });
   await register(page, "移行後に登録");

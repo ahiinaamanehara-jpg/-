@@ -40,14 +40,15 @@ test.describe("モバイル入力の現在の対応範囲", () => {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
       screens[3][1],
     );
-    await page.getByRole("link", { name: "制作画面の準備を見る" }).tap();
+    await page
+      .getByRole("button", { name: "テーマを決めずに進む", exact: true })
+      .tap();
+    await expect(page).toHaveURL(/#\/draw\/(?!new$)[^/]+$/);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
       screens[4][1],
     );
     await expect(
-      page.getByText("キャンバスはM4で追加します。まだ描画できません。", {
-        exact: true,
-      }),
+      page.getByText("まだ描画できません", { exact: false }),
     ).toBeVisible();
     await expect(page.locator("canvas")).toHaveCount(0);
     await page.screenshot({

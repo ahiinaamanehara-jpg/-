@@ -19,7 +19,10 @@ test("320pxで空状態から画面遷移・戻る・再読込", async ({ page }
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "今日は、どんな姿に？",
   );
-  await page.getByRole("link", { name: "制作画面の準備を見る" }).click();
+  await page
+    .getByRole("button", { name: "テーマを決めずに進む", exact: true })
+    .click();
+  await expect(page).toHaveURL(/#\/draw\/(?!new$)[^/]+$/);
   await expect(
     page.getByText("まだ描画できません。", { exact: false }),
   ).toBeVisible();

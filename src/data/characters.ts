@@ -1,6 +1,7 @@
 import {
   openWorkshopDB,
   StorageSchemaError,
+  validateArtworkDraft,
   type Character,
   type ReferenceAsset,
 } from "./database";
@@ -212,7 +213,10 @@ export async function deleteCharacter(
   expectedRevision: number,
 ): Promise<void> {
   const db = await openWorkshopDB();
-  const tx = db.transaction(["characters", "assets", "settings"], "readwrite");
+  const tx = db.transaction(
+    ["characters", "assets", "settings", "artworks"],
+    "readwrite",
+  );
   try {
     const operation = (async () => {
       const character = await tx.objectStore("characters").get(id);
@@ -229,7 +233,21 @@ export async function deleteCharacter(
         .get(SELECTED_CHARACTER_KEY);
       if (selected?.value === id)
         await tx.objectStore("settings").delete(SELECTED_CHARACTER_KEY);
-      // M3以降で作品ストアを追加したら、同一txで作品のcharacterIdを未分類へ移す。
+      // 推しを消しても作品ドラフトは残し、同じトランザクションで未分類へ移す。
+      const artworks = tx.objectStore("artworks");
+      const drafts = await artworks.getAll();
+      const now = new Date().toISOString();
+      for (const draft of drafts) {
+        if (draft?.characterId !== id) continue;
+        validateArtworkDraft(draft);
+        const detached = {
+          ...draft,
+          updatedAt: now,
+          revision: draft.revision + 1,
+        };
+        delete detached.characterId;
+        await artworks.put(detached);
+      }
     })();
     await Promise.all([
       operation.catch((error) => {

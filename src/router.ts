@@ -15,14 +15,24 @@ export function resolveRoute(hash: string): Route {
   if (path === "/characters/new") return "character-new";
   if (/^\/characters\/[^/]+$/.test(path)) return "character-edit";
   if (path === "/new") return "new";
-  if (path === "/draw/new") return "draw";
-  if (/^\/(works|draw)\/[^/]+$/.test(path)) return "work-missing";
+  if (/^\/draw\/[^/]+$/.test(path)) return "draw";
+  if (/^\/works\/[^/]+$/.test(path)) return "work-missing";
   if (path === "/settings/data") return "data";
   return "not-found";
 }
 
 export function characterIdFromHash(hash: string): string | undefined {
   const match = /^#?\/characters\/([^/]+)$/.exec(hash);
+  if (!match || match[1] === "new") return undefined;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return undefined;
+  }
+}
+
+export function draftIdFromHash(hash: string): string | undefined {
+  const match = /^#?\/draw\/([^/]+)$/.exec(hash);
   if (!match || match[1] === "new") return undefined;
   try {
     return decodeURIComponent(match[1]);

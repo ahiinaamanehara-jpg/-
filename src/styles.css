@@ -470,3 +470,92 @@ input[type="file"]::file-selector-button {
   white-space: nowrap;
   border: 0;
 }
+select {
+  font: inherit;
+  color: #39352e;
+  background: #fff;
+  border: 1px solid #92836f;
+  border-radius: 9px;
+  padding: 12px;
+  width: 100%;
+  min-height: 48px;
+}
+button,
+a.button,
+select,
+input,
+textarea {
+  -webkit-tap-highlight-color: rgba(128, 82, 54, 0.14);
+}
+.theme-categories {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 20px;
+}
+.category-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  border: 1px solid #b7a58d;
+  border-radius: 12px;
+  padding: 10px;
+  cursor: pointer;
+}
+.category-option input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  accent-color: #805236;
+  padding: 0;
+}
+.category-option.is-active {
+  background: #eee3d3;
+  border-color: #805236;
+}
+.theme-suggestions {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+}
+.theme-suggestions button {
+  text-align: left;
+  justify-content: flex-start;
+  padding: 14px 16px;
+  overflow-wrap: anywhere;
+}
+.theme-suggestions button[aria-pressed="true"] {
+  border: 2px solid #805236;
+  background: #f1eadc;
+}
+.refresh-themes {
+  margin: 4px 0 12px;
+}
+.draft-summary {
+  margin: 0 0 24px;
+}
+.draft-summary dt {
+  font-size: 14px;
+  color: #6b6052;
+  margin-top: 14px;
+}
+.draft-summary dd {
+  margin: 6px 0 0;
+  font-size: 19px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.resume-preparation {
+  background: #e9ede1;
+  border: 1px solid #b9c4ac;
+  padding: 22px;
+  border-radius: 18px;
+  margin: 24px 0;
+}
+.resume-preparation p {
+  overflow-wrap: anywhere;
+}
+.theme-editor p {
+  overflow-wrap: anywhere;
+}

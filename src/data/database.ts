@@ -20,10 +20,26 @@ export interface ReferenceAsset {
   height: number;
 }
 
+export type ThemeCategory = "expression" | "costume" | "pose" | "free";
+
+export interface ArtworkDraft {
+  id: string;
+  characterId?: string;
+  theme: string;
+  themeCategory: ThemeCategory | null;
+  status: "in-progress";
+  width: 960;
+  height: 960;
+  createdAt: string;
+  updatedAt: string;
+  revision: number;
+}
+
 export interface WorkshopDB extends DBSchema {
   settings: { key: string; value: { key: string; value: string } };
   characters: { key: string; value: Character };
   assets: { key: string; value: ReferenceAsset };
+  artworks: { key: string; value: ArtworkDraft };
 }
 
 export class StorageSchemaError extends Error {
@@ -31,6 +47,33 @@ export class StorageSchemaError extends Error {
     super("保存データの構造を確認できません。既存データは変更していません。");
     this.name = "StorageSchemaError";
   }
+}
+
+export function validateArtworkDraft(value: ArtworkDraft): ArtworkDraft {
+  if (
+    !value ||
+    typeof value.id !== "string" ||
+    !value.id ||
+    (value.characterId !== undefined &&
+      (typeof value.characterId !== "string" || !value.characterId)) ||
+    typeof value.theme !== "string" ||
+    value.theme.length > 500 ||
+    !(
+      value.themeCategory === null ||
+      ["expression", "costume", "pose", "free"].includes(value.themeCategory)
+    ) ||
+    value.status !== "in-progress" ||
+    value.width !== 960 ||
+    value.height !== 960 ||
+    typeof value.createdAt !== "string" ||
+    !Number.isFinite(Date.parse(value.createdAt)) ||
+    typeof value.updatedAt !== "string" ||
+    !Number.isFinite(Date.parse(value.updatedAt)) ||
+    !Number.isSafeInteger(value.revision) ||
+    value.revision < 1
+  )
+    throw new StorageSchemaError();
+  return value;
 }
 
 export class StorageBlockedError extends Error {
@@ -50,7 +93,7 @@ export async function openWorkshopDB(name = "suki-sketch") {
   const blocked = new Promise<never>((_, reject) => {
     rejectBlocked = reject;
   });
-  const opening = openDB<WorkshopDB>(name, 2, {
+  const opening = openDB<WorkshopDB>(name, 3, {
     upgrade(db, oldVersion, _newVersion, tx) {
       try {
         if (abandoned) {
@@ -75,6 +118,20 @@ export async function openWorkshopDB(name = "suki-sketch") {
             throw new StorageSchemaError();
           db.createObjectStore("characters", { keyPath: "id" });
           db.createObjectStore("assets", { keyPath: "id" });
+        } else {
+          // 旧v2が不整合なら、artworksを追加する前に移行全体を中止する。
+          for (const name of ["characters", "assets"] as const) {
+            if (!db.objectStoreNames.contains(name))
+              throw new StorageSchemaError();
+            const store = tx.objectStore(name);
+            if (store.keyPath !== "id" || store.autoIncrement)
+              throw new StorageSchemaError();
+          }
+        }
+        if (oldVersion < 3) {
+          if (db.objectStoreNames.contains("artworks"))
+            throw new StorageSchemaError();
+          db.createObjectStore("artworks", { keyPath: "id" });
         }
       } catch (error) {
         upgradeFailure = error;
@@ -104,7 +161,7 @@ export async function openWorkshopDB(name = "suki-sketch") {
   }
   connection.current = db;
   try {
-    const names = ["settings", "characters", "assets"] as const;
+    const names = ["settings", "characters", "assets", "artworks"] as const;
     if (names.some((store) => !db.objectStoreNames.contains(store)))
       throw new StorageSchemaError();
     const tx = db.transaction(names);
