@@ -1,22 +1,12 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  type Dispatch,
-  type FormEvent,
-  type SetStateAction,
-} from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   listCharacters,
-  loadCharacter,
   getSelectedCharacterId,
   type Character,
 } from "../../data/characters";
 import {
   createDraft,
-  loadDraft,
   getLastDraft,
-  markDraftOpened,
   type ArtworkDraft,
 } from "../../data/drafts";
 import {
@@ -301,114 +291,8 @@ export function ThemePage() {
         </fieldset>
       </form>
       <p className="note">
-        テーマはこのブラウザーに保存します。描画機能は準備中です。
+        推しとテーマをこのブラウザーに保存して、描き始めます。
       </p>
-    </section>
-  );
-}
-
-export function DraftPreparation({
-  id,
-  onMissing,
-}: {
-  id?: string;
-  onMissing: Dispatch<SetStateAction<string | undefined>>;
-}) {
-  const [data, setData] = useState<{
-    draft: ArtworkDraft;
-    character?: Character;
-  } | null>();
-  const [error, setError] = useState("");
-  const [resumeWarning, setResumeWarning] = useState("");
-  const [attempt, setAttempt] = useState(0);
-  useEffect(() => {
-    let active = true;
-    if (!id) return;
-    loadDraft(id)
-      .then(async (draft) => {
-        const character = draft?.characterId
-          ? (await loadCharacter(draft.characterId))?.character
-          : undefined;
-        if (!active) return undefined;
-        let warning = "";
-        if (draft) {
-          try {
-            await markDraftOpened(draft.id);
-          } catch (error) {
-            warning = `準備データは読み込めましたが、再開先を記録できませんでした。${describeError(error)}`;
-          }
-        }
-        return { data: draft ? { draft, character } : null, warning };
-      })
-      .then((result) => {
-        if (active && result) {
-          setData(result.data);
-          onMissing(result.data ? undefined : id);
-          setError("");
-          setResumeWarning(result.warning);
-        }
-      })
-      .catch((error) => {
-        if (active) setError(describeError(error));
-      });
-    return () => {
-      active = false;
-    };
-  }, [id, attempt, onMissing]);
-  if (error)
-    return (
-      <section className="card">
-        <p role="alert" className="error">
-          {error}
-        </p>
-        <button onClick={() => setAttempt((n) => n + 1)}>
-          もう一度読み込む
-        </button>
-      </section>
-    );
-  if (id && data === undefined)
-    return <p role="status">準備データを読み込んでいます…</p>;
-  if (id && data === null)
-    return (
-      <section className="card">
-        <p>保存されていないか、削除された準備データです。</p>
-        <a className="button" href="#/new">
-          テーマを決める
-        </a>
-      </section>
-    );
-  return (
-    <section className="card draft-preparation">
-      {data ? (
-        <>
-          <p className="notice" role="status">
-            保存した推しとテーマです。このページを開き直すと確認できます。
-          </p>
-          {resumeWarning && (
-            <p role="alert" className="error">
-              {resumeWarning}
-            </p>
-          )}
-          <dl className="draft-summary">
-            <dt>描くキャラクター</dt>
-            <dd>{data.character?.name ?? "自由な落書き"}</dd>
-            <dt>描きたいテーマ</dt>
-            <dd>{data.draft.theme || "テーマはまだ決めていません"}</dd>
-          </dl>
-        </>
-      ) : (
-        <p>準備データはまだありません。テーマを選ぶか、決めずに進めます。</p>
-      )}
-      <div className="canvas-placeholder">
-        <p>ここに、あなたの一枚を。</p>
-        <span>キャンバスは準備中です。まだ描画できません。</span>
-      </div>
-      <p>
-        保存したテーマは、描くときのきっかけに。描画・画像取込は、これから追加します。
-      </p>
-      <a className="button" href="#/new">
-        別のテーマで準備する
-      </a>
     </section>
   );
 }
@@ -432,15 +316,15 @@ export function ResumePreparation() {
   if (error)
     return (
       <p role="alert" className="error">
-        続きの準備を読み込めません。{error}
+        続きの作品を読み込めません。{error}
       </p>
     );
   return draft ? (
     <section className="resume-preparation">
-      <h2>続きの準備があります</h2>
+      <h2>続きから描ける作品があります</h2>
       <p>{draft.theme || "テーマはまだ決めていません"}</p>
       <a className="button" href={`#/draw/${encodeURIComponent(draft.id)}`}>
-        続きから準備を開く
+        続きから描く
       </a>
     </section>
   ) : null;

@@ -1,3 +1,4 @@
+import { isDrawingTools, type DrawingTools } from "../drawing/tools";
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 
 export interface Character {
@@ -20,6 +21,17 @@ export interface ReferenceAsset {
   height: number;
 }
 
+export interface ArtworkAsset {
+  id: string;
+  kind: "canvas" | "thumbnail";
+  blob: Blob;
+  mime: string;
+  size: number;
+  width: number;
+  height: number;
+}
+export type StoredAsset = ReferenceAsset | ArtworkAsset;
+
 export type ThemeCategory = "expression" | "costume" | "pose" | "free";
 
 export interface ArtworkDraft {
@@ -28,6 +40,9 @@ export interface ArtworkDraft {
   theme: string;
   themeCategory: ThemeCategory | null;
   status: "in-progress";
+  canvasAssetId?: string;
+  thumbnailAssetId?: string;
+  tools?: DrawingTools;
   width: 960;
   height: 960;
   createdAt: string;
@@ -38,7 +53,7 @@ export interface ArtworkDraft {
 export interface WorkshopDB extends DBSchema {
   settings: { key: string; value: { key: string; value: string } };
   characters: { key: string; value: Character };
-  assets: { key: string; value: ReferenceAsset };
+  assets: { key: string; value: StoredAsset };
   artworks: { key: string; value: ArtworkDraft };
 }
 
@@ -63,6 +78,15 @@ export function validateArtworkDraft(value: ArtworkDraft): ArtworkDraft {
       ["expression", "costume", "pose", "free"].includes(value.themeCategory)
     ) ||
     value.status !== "in-progress" ||
+    (value.canvasAssetId !== undefined &&
+      (typeof value.canvasAssetId !== "string" || !value.canvasAssetId)) ||
+    (value.thumbnailAssetId !== undefined &&
+      (typeof value.thumbnailAssetId !== "string" ||
+        !value.thumbnailAssetId)) ||
+    Boolean(value.canvasAssetId) !== Boolean(value.thumbnailAssetId) ||
+    (value.canvasAssetId !== undefined &&
+      value.canvasAssetId === value.thumbnailAssetId) ||
+    (value.tools !== undefined && !isDrawingTools(value.tools)) ||
     value.width !== 960 ||
     value.height !== 960 ||
     typeof value.createdAt !== "string" ||

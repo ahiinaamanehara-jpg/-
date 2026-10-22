@@ -223,13 +223,11 @@ test("推しとテーマを引き継ぎ、再読み込み・ホームの続き�
   await page
     .getByRole("link", { name: "すきのスケッチ ホーム", exact: true })
     .click();
-  await page
-    .getByRole("link", { name: "続きから準備を開く", exact: true })
-    .click();
+  await page.getByRole("link", { name: "続きから描く", exact: true }).click();
   await expect(page).toHaveURL(url);
   expect((await stored(page)).drafts).toHaveLength(1);
   expect((await stored(page)).drafts[0]).toEqual(first);
-  await expect(page.locator("canvas")).toHaveCount(0);
+  await expect(page.getByLabel("お絵描きキャンバス")).toBeVisible();
 });
 
 test("テーマなしでも開始でき、スキップは推しを保って入力テーマだけを外す", async ({
@@ -541,8 +539,8 @@ test.describe("テーマのモバイル入力", () => {
     await expect(page).toHaveURL(/#\/draw\/(?!new$)[^/]+$/);
     await expect(page.getByRole("main")).toContainText(text);
     await expect(
-      page.getByText("まだ描画できません", { exact: false }),
-    ).toBeVisible();
+      page.getByRole("button", { name: "ペン", exact: true }),
+    ).toBeEnabled();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -562,7 +560,9 @@ test("キーボードでカテゴリを切り替え、自由入力から保存�
 }) => {
   await page.goto("#/new");
   const category = page.getByRole("radio", { name: "表情", exact: true });
+  await expect(category).toBeEnabled();
   await category.focus();
+  await expect(category).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await expect(
     page.getByRole("radio", { name: "衣装・小物", exact: true }),
@@ -592,9 +592,7 @@ test("最後に開き直した準備データをホームの続きから再開�
   await page
     .getByRole("link", { name: "すきのスケッチ ホーム", exact: true })
     .click();
-  await page
-    .getByRole("link", { name: "続きから準備を開く", exact: true })
-    .click();
+  await page.getByRole("link", { name: "続きから描く", exact: true }).click();
   await expect(page).toHaveURL(firstURL);
   await expect(page.getByRole("main")).toContainText("先に作った準備を見返す");
   expect((await stored(page)).drafts).toHaveLength(2);

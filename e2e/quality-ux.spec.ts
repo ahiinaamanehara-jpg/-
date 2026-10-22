@@ -19,7 +19,7 @@ test.describe("モバイル入力の現在の対応範囲", () => {
     isMobile: true,
   });
 
-  test("タップで準備画面へ移動し保存説明を開閉できる（描画は未実装）", async ({
+  test("タップでテーマからキャンバスへ移動し保存説明を開閉できる", async ({
     page,
   }, testInfo) => {
     await page.goto("");
@@ -48,9 +48,9 @@ test.describe("モバイル入力の現在の対応範囲", () => {
       screens[4][1],
     );
     await expect(
-      page.getByText("まだ描画できません", { exact: false }),
-    ).toBeVisible();
-    await expect(page.locator("canvas")).toHaveCount(0);
+      page.getByRole("button", { name: "ペン", exact: true }),
+    ).toBeEnabled();
+    await expect(page.getByLabel("お絵描きキャンバス")).toBeVisible();
     await page.screenshot({
       path: testInfo.outputPath("draw-preparation-320.png"),
       fullPage: true,

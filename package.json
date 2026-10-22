@@ -16,6 +16,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:long": "playwright test --config=playwright.long.config.ts",
     "format": "prettier --write src tests e2e *.ts *.js *.json index.html"
   },
   "dependencies": {

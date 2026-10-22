@@ -24,8 +24,9 @@ test("320pxで空状態から画面遷移・戻る・再読込", async ({ page }
     .click();
   await expect(page).toHaveURL(/#\/draw\/(?!new$)[^/]+$/);
   await expect(
-    page.getByText("まだ描画できません。", { exact: false }),
-  ).toBeVisible();
+    page.getByRole("button", { name: "ペン", exact: true }),
+  ).toBeEnabled();
+  await expect(page.getByLabel("お絵描きキャンバス")).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

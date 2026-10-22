@@ -4,6 +4,7 @@ import {
   validateArtworkDraft,
   type Character,
   type ReferenceAsset,
+  type StoredAsset,
 } from "./database";
 export type { Character, ReferenceAsset } from "./database";
 
@@ -63,7 +64,7 @@ function validateImage(image: { blob: Blob; width: number; height: number }) {
       "参考画像を確認できません。画像を選び直してください。",
     );
 }
-function validateAsset(value: ReferenceAsset, id: string) {
+function validateAsset(value: StoredAsset, id: string) {
   if (
     !value ||
     value.id !== id ||
@@ -186,8 +187,14 @@ export async function saveCharacter(
         await tx.objectStore("assets").add(asset);
         character.referenceAssetId = id;
       }
-      if (existing?.referenceAssetId && input.image !== undefined)
-        await tx.objectStore("assets").delete(existing.referenceAssetId);
+      if (existing?.referenceAssetId && input.image !== undefined) {
+        const asset = await tx
+          .objectStore("assets")
+          .get(existing.referenceAssetId);
+        // 不整合な推しの参照から作品画像を削除しない。
+        if (asset?.kind === "reference")
+          await tx.objectStore("assets").delete(existing.referenceAssetId);
+      }
       await tx.objectStore("characters").put(character);
       return character;
     })();
@@ -225,8 +232,13 @@ export async function deleteCharacter(
         validateCharacter(character).revision !== expectedRevision
       )
         throw new CharacterConflictError();
-      if (character.referenceAssetId)
-        await tx.objectStore("assets").delete(character.referenceAssetId);
+      if (character.referenceAssetId) {
+        const asset = await tx
+          .objectStore("assets")
+          .get(character.referenceAssetId);
+        if (asset?.kind === "reference")
+          await tx.objectStore("assets").delete(character.referenceAssetId);
+      }
       await tx.objectStore("characters").delete(id);
       const selected = await tx
         .objectStore("settings")

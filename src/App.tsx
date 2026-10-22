@@ -11,11 +11,8 @@ import {
   CharacterEditor,
   FreeStartLink,
 } from "./features/characters/CharacterPages";
-import {
-  ThemePage,
-  DraftPreparation,
-  ResumePreparation,
-} from "./features/themes/ThemePages";
+import { ThemePage, ResumePreparation } from "./features/themes/ThemePages";
+import { DrawingPage } from "./features/drawing/DrawingPage";
 import { canNavigate } from "./navigation";
 export function App() {
   const [hash, setHash] = useState(window.location.hash);
@@ -52,7 +49,7 @@ export function App() {
         anchor?.getAttribute("target") === "_blank"
       )
         return;
-      if (!canNavigate()) {
+      if (!canNavigate(target)) {
         event.preventDefault();
         return;
       }
@@ -63,7 +60,7 @@ export function App() {
       if (next === activeHash.current) return;
       const approved = approvedTarget === next;
       approvedTarget = undefined;
-      if (!approved && !canNavigate()) {
+      if (!approved && !canNavigate(next)) {
         // Backで到達した先を上書きせず、元の編集画面へ戻す。
         // 通常のリンクはclickで事前確認し、キャンセル時に履歴を追加しない。
         window.history.pushState(null, "", activeHash.current || "#/");
@@ -207,7 +204,7 @@ export function App() {
               </div>
             </section>
             <p className="note">
-              推しと創作テーマを保存できます。描画・作品画像の保存は、これから追加します。
+              推しと創作テーマを保存できます。途中の絵を描いて保存し、PNGを書き出せます。
             </p>
             <section className="info">
               <h2>自分のペースで、大丈夫。</h2>
@@ -215,6 +212,9 @@ export function App() {
                 講座も振り返りも、使いたいときだけ。完成を急ぐ必要はありません。
               </p>
               <button onClick={() => setSheet(true)}>端末内保存について</button>
+              <p>
+                <a href="#/draw/new">保存せずに落書きを試す</a>
+              </p>
             </section>
           </>
         )}
@@ -233,11 +233,7 @@ export function App() {
         )}
         {route === "new" && <ThemePage />}
         {route === "draw" && (
-          <DraftPreparation
-            key={hash}
-            id={draftId}
-            onMissing={setMissingDraftId}
-          />
+          <DrawingPage key={hash} id={draftId} onMissing={setMissingDraftId} />
         )}
         {route === "data" && (
           <section className="card">
@@ -251,7 +247,7 @@ export function App() {
             </p>
             <button onClick={() => setSheet(true)}>保存の仕組みを読む</button>
             <p className="note">
-              推しの名前・メモ・参考画像と、創作テーマの準備データを保存できます。作品画像の保存・バックアップ・復元は後の工程で追加します。
+              推しの名前・メモ・参考画像と、創作テーマの準備データを保存できます。作品画像も保存できます。全件バックアップ・復元は後の工程で追加します。
             </p>
           </section>
         )}
@@ -281,7 +277,9 @@ export function App() {
           <p>
             サイトデータの削除、プライベートブラウズ、端末やURLの変更でデータが失われる場合があります。端末内保存は、永久保存の保証ではありません。
           </p>
-          <p>画像の書き出しと全データのバックアップは後の工程で用意します。</p>
+          <p>
+            作品はPNGで書き出せます。推しやメモを含めた全データのバックアップは後の工程で用意します。
+          </p>
         </Sheet>
       )}
     </>
