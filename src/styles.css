@@ -682,3 +682,87 @@ textarea {
   min-width: 0;
   flex: 1 1 180px;
 }
+.drawing-support {
+  margin: 0 0 20px;
+}
+.hint-tabs,
+.reflection-choices {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+.hint-tabs button[aria-pressed="true"],
+.reflection-choices button[aria-pressed="true"] {
+  background: #805236;
+  color: #fff;
+}
+.hint-illustration {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 210px;
+  background: #faf6ef;
+  border-radius: 12px;
+  margin: 16px 0;
+}
+.hint-tips {
+  padding-left: 24px;
+  margin-bottom: 24px;
+}
+.hint-tips li + li {
+  margin-top: 14px;
+}
+.reflection-form {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.reflection-question {
+  font-size: 20px;
+  font-weight: 650;
+  margin: 18px 0;
+  overflow-wrap: anywhere;
+}
+.reflection-form label {
+  display: block;
+  font-weight: 600;
+  margin-top: 16px;
+}
+.reflection-form textarea,
+.reflection-form select {
+  width: 100%;
+  min-width: 0;
+}
+.reflection-history {
+  padding: 0;
+  list-style: none;
+  margin: 18px 0;
+}
+.reflection-history li {
+  border-top: 1px solid #d0c3b0;
+  padding: 18px 0;
+}
+.reflection-history h4 {
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.reflection-answer {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.reflection-return {
+  margin-top: 24px;
+}
+.comparison-preview {
+  margin-top: 16px;
+}
+.comparison-preview img {
+  display: block;
+  width: 100%;
+  height: 180px;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid #d0c3b0;
+}

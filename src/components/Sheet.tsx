@@ -1,26 +1,35 @@
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  type ReactNode,
+  type RefObject,
+} from "react";
 export function Sheet({
   title,
   onClose,
   children,
   closeDisabled = false,
+  returnFocusRef,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   closeDisabled?: boolean;
+  returnFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
+    const previous =
+      returnFocusRef?.current ?? (document.activeElement as HTMLElement | null);
     const dialog = ref.current!;
     dialog.showModal();
     return () => {
       dialog.close();
       previous?.focus();
     };
-  }, []);
+  }, [returnFocusRef]);
   return (
     <dialog
       ref={ref}

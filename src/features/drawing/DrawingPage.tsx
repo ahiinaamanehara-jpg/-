@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useCallback,
   useRef,
   useState,
   type ChangeEvent,
@@ -32,6 +33,11 @@ import {
   type SaveState,
 } from "../../drawing/session";
 import { registerNavigationGuard } from "../../navigation";
+import { HintSheet } from "../hints/HintSheet";
+import {
+  ReflectionSheet,
+  type ReflectionExitGuard,
+} from "../reflections/ReflectionSheet";
 
 interface DrawingData {
   draft?: ArtworkDraft;
@@ -152,6 +158,14 @@ function DrawingEditor({ data }: { data: DrawingData }) {
   const [exporting, setExporting] = useState(false);
   const [showReference, setShowReference] = useState(false);
   const reference = useRef<HTMLImageElement>(null);
+  const [overlay, setOverlay] = useState<"hints" | "reflection">();
+  const [openingReflection, setOpeningReflection] = useState(false);
+  const openingReflectionRef = useRef(false);
+  const reflectionTrigger = useRef<HTMLButtonElement>(null);
+  const reflectionGuard = useRef<ReflectionExitGuard>(undefined);
+  const registerReflectionGuard = useCallback((guard?: ReflectionExitGuard) => {
+    reflectionGuard.current = guard;
+  }, []);
   useEffect(() => {
     let active = true;
     let controller: DrawingSession | undefined;
@@ -214,6 +228,11 @@ function DrawingEditor({ data }: { data: DrawingData }) {
     const unregister = registerNavigationGuard((target) => {
       const controller = session.current;
       if (allowLeave.current) return true;
+      if (
+        openingReflectionRef.current ||
+        (reflectionGuard.current && !reflectionGuard.current.canLeave())
+      )
+        return false;
       if (!controller?.dirty) return !importingRef.current;
       if (importingRef.current) return false;
       if (target) destination.current = target;
@@ -253,7 +272,10 @@ function DrawingEditor({ data }: { data: DrawingData }) {
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (
         !allowLeave.current &&
-        (session.current?.dirty || importingRef.current)
+        (session.current?.dirty ||
+          importingRef.current ||
+          openingReflectionRef.current ||
+          reflectionGuard.current?.pending)
       ) {
         event.preventDefault();
         event.returnValue = "";
@@ -270,6 +292,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
       !ready ||
       fatal ||
       importingRef.current ||
+      openingReflectionRef.current ||
       leavingRef.current ||
       pointer.current !== undefined ||
       !event.isPrimary ||
@@ -320,6 +343,22 @@ function DrawingEditor({ data }: { data: DrawingData }) {
   const save = async () => {
     finishStroke();
     await session.current?.flush(true);
+  };
+  const openReflection = async () => {
+    const controller = session.current;
+    if (!controller?.draft || openingReflectionRef.current) return;
+    finishStroke();
+    openingReflectionRef.current = true;
+    setOpeningReflection(true);
+    setActionError("");
+    try {
+      if (await controller.flush(true)) setOverlay("reflection");
+    } catch (error) {
+      setActionError(drawingError(error));
+    } finally {
+      openingReflectionRef.current = false;
+      setOpeningReflection(false);
+    }
   };
   const copy = async () => {
     const controller = session.current;
@@ -412,7 +451,13 @@ function DrawingEditor({ data }: { data: DrawingData }) {
         );
     }
   };
-  const disabled = !ready || Boolean(fatal) || importing || leaving || drawing;
+  const disabled =
+    !ready ||
+    Boolean(fatal) ||
+    importing ||
+    leaving ||
+    drawing ||
+    openingReflection;
   const statusText = {
     saved: "保存済み",
     pending: "未保存の変更があります",
@@ -457,7 +502,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
       {data.reference && (
         <button
           className="reference-toggle"
-          disabled={!ready || drawing || importing || leaving}
+          disabled={disabled}
           onClick={() => setShowReference((v) => !v)}
           aria-expanded={showReference}
         >
@@ -589,6 +634,25 @@ function DrawingEditor({ data }: { data: DrawingData }) {
           {exporting ? "PNGを準備中…" : "PNGを書き出す"}
         </button>
       </div>
+      <div className="actions drawing-support">
+        <button
+          disabled={disabled}
+          aria-haspopup="dialog"
+          onClick={() => setOverlay("hints")}
+        >
+          描くヒント（任意）
+        </button>
+        <button
+          ref={reflectionTrigger}
+          disabled={disabled || !data.draft}
+          aria-haspopup="dialog"
+          onClick={() => {
+            void openReflection();
+          }}
+        >
+          {openingReflection ? "絵を保存しています…" : "振り返る（任意）"}
+        </button>
+      </div>
       {exportFile && (
         <div className="export-result">
           <p>PNGを用意しました。取得できない場合はこちらから開けます。</p>
@@ -644,6 +708,17 @@ function DrawingEditor({ data }: { data: DrawingData }) {
       <a className="button" href="#/new">
         別のテーマで準備する
       </a>
+      {overlay === "hints" && (
+        <HintSheet onClose={() => setOverlay(undefined)} />
+      )}
+      {overlay === "reflection" && data.draft && (
+        <ReflectionSheet
+          artworkId={data.draft.id}
+          returnFocusRef={reflectionTrigger}
+          registerExitGuard={registerReflectionGuard}
+          onClose={() => setOverlay(undefined)}
+        />
+      )}
     </section>
   );
 }

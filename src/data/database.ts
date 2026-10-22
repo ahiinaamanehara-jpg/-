@@ -1,5 +1,7 @@
 import { isDrawingTools, type DrawingTools } from "../drawing/tools";
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
+import type { Reflection } from "./reflectionTypes";
+import type { QuestionId } from "./reflectionQuestions";
 
 export interface Character {
   id: string;
@@ -55,6 +57,11 @@ export interface WorkshopDB extends DBSchema {
   characters: { key: string; value: Character };
   assets: { key: string; value: StoredAsset };
   artworks: { key: string; value: ArtworkDraft };
+  reflections: {
+    key: string;
+    value: Reflection;
+    indexes: { "by-artwork": string; "by-question": [string, QuestionId] };
+  };
 }
 
 export class StorageSchemaError extends Error {
@@ -117,7 +124,7 @@ export async function openWorkshopDB(name = "suki-sketch") {
   const blocked = new Promise<never>((_, reject) => {
     rejectBlocked = reject;
   });
-  const opening = openDB<WorkshopDB>(name, 3, {
+  const opening = openDB<WorkshopDB>(name, 4, {
     upgrade(db, oldVersion, _newVersion, tx) {
       try {
         if (abandoned) {
@@ -156,6 +163,23 @@ export async function openWorkshopDB(name = "suki-sketch") {
           if (db.objectStoreNames.contains("artworks"))
             throw new StorageSchemaError();
           db.createObjectStore("artworks", { keyPath: "id" });
+        } else {
+          if (!db.objectStoreNames.contains("artworks"))
+            throw new StorageSchemaError();
+          const artworks = tx.objectStore("artworks");
+          if (artworks.keyPath !== "id" || artworks.autoIncrement)
+            throw new StorageSchemaError();
+        }
+        if (oldVersion < 4) {
+          if (db.objectStoreNames.contains("reflections"))
+            throw new StorageSchemaError();
+          const reflections = db.createObjectStore("reflections", {
+            keyPath: "id",
+          });
+          reflections.createIndex("by-artwork", "artworkId");
+          reflections.createIndex("by-question", ["artworkId", "questionId"], {
+            unique: true,
+          });
         }
       } catch (error) {
         upgradeFailure = error;
@@ -185,7 +209,13 @@ export async function openWorkshopDB(name = "suki-sketch") {
   }
   connection.current = db;
   try {
-    const names = ["settings", "characters", "assets", "artworks"] as const;
+    const names = [
+      "settings",
+      "characters",
+      "assets",
+      "artworks",
+      "reflections",
+    ] as const;
     if (names.some((store) => !db.objectStoreNames.contains(store)))
       throw new StorageSchemaError();
     const tx = db.transaction(names);
@@ -196,8 +226,25 @@ export async function openWorkshopDB(name = "suki-sketch") {
         !store.autoIncrement
       );
     });
+    const reflections = tx.objectStore("reflections");
+    if (
+      !reflections.indexNames.contains("by-artwork") ||
+      !reflections.indexNames.contains("by-question")
+    )
+      throw new StorageSchemaError();
+    const byArtwork = reflections.index("by-artwork"),
+      byQuestion = reflections.index("by-question");
+    const questionPath = byQuestion.keyPath;
+    const validIndexes =
+      byArtwork.keyPath === "artworkId" &&
+      !byArtwork.unique &&
+      byQuestion.unique &&
+      Array.isArray(questionPath) &&
+      questionPath.length === 2 &&
+      questionPath[0] === "artworkId" &&
+      questionPath[1] === "questionId";
     await tx.done;
-    if (!valid) throw new StorageSchemaError();
+    if (!valid || !validIndexes) throw new StorageSchemaError();
     return db;
   } catch (error) {
     db.close();
