@@ -1,6 +1,8 @@
 import type { DrawingTools } from "./tools";
 import type { DrawingBundle } from "../data/drawings";
 import { inspectImageDimensions } from "../data/images";
+import { pngBlob } from "../images/png";
+export { pngBlob } from "../images/png";
 
 export const CANVAS_SIZE = 960;
 export const UNDO_BYTES = 32 * 1024 * 1024;
@@ -52,25 +54,6 @@ export class UndoHistory {
     this.items = [];
     this.bytes = 0;
   }
-}
-export function pngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    try {
-      canvas.toBlob(
-        (blob) =>
-          blob
-            ? resolve(blob)
-            : reject(
-                new Error(
-                  "画像を書き出せませんでした。もう一度お試しください。",
-                ),
-              ),
-        "image/png",
-      );
-    } catch (error) {
-      reject(error);
-    }
-  });
 }
 export async function decodePNG(blob: Blob): Promise<{
   source: CanvasImageSource;

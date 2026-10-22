@@ -590,6 +590,7 @@ textarea {
 .save-status {
   background: #e7efe3;
   color: #344f37;
+  border: 1px solid transparent;
   padding: 5px 12px;
   border-radius: 20px;
   margin: 0;
@@ -598,6 +599,7 @@ textarea {
 .save-status.error {
   color: #8a2521;
   background: #fff0ed;
+  border-color: #b66c62;
 }
 .canvas-frame {
   background: #fff;

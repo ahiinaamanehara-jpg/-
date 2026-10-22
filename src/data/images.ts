@@ -1,3 +1,5 @@
+import { pngBlob } from "../images/png";
+
 export interface PreparedImage {
   blob: Blob;
   width: number;
@@ -250,17 +252,7 @@ export async function prepareReferenceImage(
     if (!context)
       throw new Error("このブラウザーでは画像の変換を利用できません。");
     context.drawImage(image.source, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob>((resolve, reject) =>
-      canvas.toBlob(
-        (value) =>
-          value
-            ? resolve(value)
-            : reject(
-                new Error("画像を変換できません。もう一度選び直してください。"),
-              ),
-        "image/png",
-      ),
-    );
+    const blob = await pngBlob(canvas);
     if (blob.type !== "image/png" || blob.size > MAX_REFERENCE_BYTES)
       throw new Error(
         "変換後の画像が大きすぎます。小さな画像を選び直してください。",
