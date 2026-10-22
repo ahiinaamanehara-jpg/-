@@ -413,3 +413,21 @@ PNGの完了通知が来ないと保存・画像準備が終わらない経路�
 2026-10-22 13:37:36 UTC開始の[Pages Run #7](https://github.com/ahiinaamanehara-jpg/-/actions/runs/39788494795)は、main・コミット7289a8eで成功したことをGitHubの実行画面で確認した。個別ログの件数や今回の修正の配信成功を意味しない。今回のコード反映後は手動で再公開し、[Androidの手順](DEVICE_CHECKLIST.md#今回androidで確認する手順)で実機確認する。
 
 iPadの操作感調整はユーザーの指示で延期。Androidの機種・OS・ブラウザー・操作別の受け入れ、OSのPNG／ZIP取得、TalkBack、実機の遅延・メモリー、Firefox／WebKit等は未確認。M7全体の完了扱いにはしない。
+
+
+## M7追補：複数ブラウザー検証（2026-10-22）
+
+保存調整後の基本確認と次工程への指示を受領した。ユーザーのAndroid利用の文脈での基本確認報告であり、全項目の実機記録やブラウザー版の確認は含めない。前回の修正a4d248fは[公開Run #8](https://github.com/ahiinaamanehara-jpg/-/actions/runs/39796476408)で成功していることをGitHub上で確認した。開始は2026-10-22 14:32:10 UTC。実行画面のコミットリンクもa4d248fと一致した。
+
+今回はM7の複数ブラウザー検証を対象とする。`compatibility.yml`でChromium／Firefox／WebKitを独立して実行し、各エンジンで参考画像あり／なしの全体フロー2件、機械検査・表示・キーボードの3件、計5件を検証する。再試行なし、失敗で他エンジンを中止しない。結果・通信記録・機械検査集計と失敗時の画像／トレースを7日間保存する。
+
+| 検証 | 結果 |
+| --- | --- |
+| `npm run typecheck`・`npm run lint` | 成功 |
+| `npm run test` | 8ファイル・110件成功 |
+| システムChromium指定の`npm run test:e2e:compat -- --project=chromium` | 5件成功。Linux Chromium 154。実機Android／Safariとは区別 |
+| `npm run build` | 通常の相対baseで成功 |
+| 共通テスト定義の一覧 | 4構成・20件。`--list --reporter=list`で列挙し、実行結果のJSONと区別 |
+| GitHub上の3エンジン | 最初のコード反映後に確認し、実行結果を以下へ追記する。定義の追加だけを成功扱いにしない |
+
+通常E2E106件・5分描画1件は直前工程の実行記録。アプリ本体を変えない本工程では繰り返さず、共通5件を検証する。互換性の出力先は`test-results/compat/`とし、通常テストと長時間テストの記録を保持する。iPadの操作感調整、実機Safari・Edge、OSの写真／ファイル選択、読み上げ、低性能端末の遅延は引き続き別の確認項目とする。

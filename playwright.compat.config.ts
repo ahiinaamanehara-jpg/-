@@ -5,6 +5,14 @@ import base from "./playwright.config";
 export default defineConfig({
   ...base,
   testMatch: ["**/acceptance.spec.ts", "**/accessibility.spec.ts"],
+  outputDir: "./test-results/compat",
+  forbidOnly: Boolean(process.env.CI),
+  retries: 0,
+  reporter: [
+    ["list"],
+    ...(process.env.GITHUB_ACTIONS ? ([["github"]] as const) : []),
+    ["json", { outputFile: "test-results/compat/report.json" }],
+  ],
   projects: [
     {
       name: "chromium",

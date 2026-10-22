@@ -79,6 +79,8 @@ iPadのSafariで[アプリの公開URL](https://ahiinaamanehara-jpg.github.io/-/
 
 ## 公開設定の検証範囲
 
+互換性の確認は[Check browser compatibility](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/compatibility.yml)で行えます。対象コードをmainへ送ると自動実行し、手動なら「Run workflow」→mainを選びます。chromium・firefox・webkitの3ジョブを個別に確認し、失敗時は該当ジョブのエラーとArtifactsを参照します。これはテスト専用で、サイト公開は「Publish test site」を使います。アプリを使うだけなら、この操作は不要です。
+
 ローカル環境で依存復元・lint・単体テスト・本番ビルドを確認し、M7で公開前のChromium画面操作テストも追加しました。公開するのは`dist/`だけで、ソース全体やテスト結果をサイトのアセットとして配置しません。`workflow_dispatch`のみなので、コードの送信だけではこのワークフローは公開を実行しません。
 
 ユーザーから既存のPages公開・サイト閲覧・M2〜M6と質問修正の基本操作の確認報告を受領しています。2026-10-22 13:37 UTCに開始した[公開Run #7](https://github.com/ahiinaamanehara-jpg/-/actions/runs/39788494795)は、M7コード7289a8eで成功したことをGitHub上で確認できました。今回の新しい修正は、コード反映後にもう一度手動公開してください。Androidの更新後の操作は確認待ちで、iPadの調整は後で行います。ワークフローは既定ブランチに保存されてから実行できます。

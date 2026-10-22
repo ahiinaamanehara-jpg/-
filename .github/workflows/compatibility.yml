@@ -1,0 +1,51 @@
+name: Check browser compatibility
+
+# 互換性の確認だけを実行する。サイトの公開はpages.ymlの手動操作を使う。
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "e2e/**"
+      - "package.json"
+      - "package-lock.json"
+      - "playwright*.config.ts"
+      - "tsconfig.json"
+      - "vite.config.ts"
+      - "index.html"
+      - ".nvmrc"
+      - ".github/workflows/compatibility.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compatibility-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compatibility:
+    name: ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci --cache "$RUNNER_TEMP/npm-cache"
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run test:e2e:compat -- --project=${{ matrix.browser }}
+      - name: Save compatibility results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compatibility-${{ matrix.browser }}
+          path: test-results/compat/
+          if-no-files-found: warn
+          retention-days: 7
