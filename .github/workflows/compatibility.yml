@@ -39,7 +39,12 @@ jobs:
         with:
           node-version-file: .nvmrc
       - run: npm ci --cache "$RUNNER_TEMP/npm-cache"
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Install Chromium Headless Shell
+        if: matrix.browser == 'chromium'
+        run: npx playwright install --with-deps --only-shell chromium
+      - name: Install Firefox or WebKit
+        if: matrix.browser != 'chromium'
+        run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: npm run test:e2e:compat -- --project=${{ matrix.browser }}
       - name: Save compatibility results
         if: always()
