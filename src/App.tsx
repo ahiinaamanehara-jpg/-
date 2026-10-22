@@ -1,21 +1,78 @@
 import { useEffect, useRef, useState } from "react";
-import { resolveRoute } from "./router";
+import { resolveRoute, characterIdFromHash } from "./router";
 import { Sheet } from "./components/Sheet";
-import { Field } from "./components/Field";
-import { checkWorkshopStorage, StorageSchemaError } from "./data/database";
+import {
+  checkWorkshopStorage,
+  StorageSchemaError,
+  StorageBlockedError,
+} from "./data/database";
+import {
+  CharactersPage,
+  CharacterEditor,
+  SelectedCharacter,
+  FreeStartLink,
+} from "./features/characters/CharacterPages";
+import { canNavigate } from "./navigation";
 export function App() {
   const [hash, setHash] = useState(window.location.hash);
   const [sheet, setSheet] = useState(false);
   const [storage, setStorage] = useState("保存環境を確認しています");
   const heading = useRef<HTMLHeadingElement>(null);
+  const activeHash = useRef(window.location.hash);
   const route = resolveRoute(hash);
+  const characterId = characterIdFromHash(hash);
+  const [missingId, setMissingId] = useState<string>();
+  const [notice, setNotice] = useState("");
   useEffect(() => {
+    let approvedTarget: string | undefined;
+    const click = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      )
+        return;
+      const anchor =
+        event.target instanceof Element
+          ? event.target.closest("a[href]")
+          : null;
+      const target = anchor?.getAttribute("href");
+      if (
+        !target?.startsWith("#/") ||
+        target === activeHash.current ||
+        anchor?.getAttribute("target") === "_blank"
+      )
+        return;
+      if (!canNavigate()) {
+        event.preventDefault();
+        return;
+      }
+      approvedTarget = target;
+    };
     const change = () => {
-      setHash(window.location.hash);
+      const next = window.location.hash;
+      if (next === activeHash.current) return;
+      const approved = approvedTarget === next;
+      approvedTarget = undefined;
+      if (!approved && !canNavigate()) {
+        // Backで到達した先を上書きせず、元の編集画面へ戻す。
+        // 通常のリンクはclickで事前確認し、キャンセル時に履歴を追加しない。
+        window.history.pushState(null, "", activeHash.current || "#/");
+        return;
+      }
+      activeHash.current = next;
+      setHash(next);
       setSheet(false);
     };
     window.addEventListener("hashchange", change);
-    return () => window.removeEventListener("hashchange", change);
+    document.addEventListener("click", click, true);
+    return () => {
+      window.removeEventListener("hashchange", change);
+      document.removeEventListener("click", click, true);
+    };
   }, []);
   useEffect(() => {
     heading.current?.focus();
@@ -46,6 +103,8 @@ export function App() {
           setStorage(
             "保存領域が不足しています。端末内保存を利用できません。既存データは削除していません。",
           );
+        } else if (error instanceof StorageBlockedError) {
+          setStorage(error.message);
         } else {
           setStorage("このブラウザーでは端末内保存を利用できません");
         }
@@ -58,7 +117,8 @@ export function App() {
     home: "好き、からはじめよう。",
     characters: "推しのノート",
     "character-new": "推しを迎える",
-    "character-missing": "推しが見つかりません",
+    "character-edit":
+      missingId === characterId ? "推しが見つかりません" : "推しを編集する",
     new: "今日は、どんな姿に？",
     draw: "あなたの創作スペース",
     "work-missing": "作品が見つかりません",
@@ -132,14 +192,12 @@ export function App() {
                   <a className="button primary" href="#/characters">
                     好きなキャラクターを選ぶ
                   </a>
-                  <a className="button" href="#/new">
-                    自由に落書きする準備
-                  </a>
+                  <FreeStartLink>自由に落書きする準備</FreeStartLink>
                 </div>
               </div>
             </section>
             <p className="note">
-              今は画面の土台を準備中です。描画・作品保存はまだ利用できません。
+              推しの登録・保存が使えるようになりました。描画・作品保存は、これから追加します。
             </p>
             <section className="info">
               <h2>自分のペースで、大丈夫。</h2>
@@ -150,42 +208,22 @@ export function App() {
             </section>
           </>
         )}
-        {route === "characters" && (
-          <section className="card">
-            <div className="empty-icon" aria-hidden="true">
-              ♡
-            </div>
-            <h2>推しのノートは、まだ空です</h2>
-            <p>好きなところや描きたい表情を、少しずつ残せる場所になります。</p>
-            <a className="button primary" href="#/characters/new">
-              登録画面を開く
-            </a>
-            <p className="note">登録・保存は次の工程で追加します。</p>
-            <a href="#/new">推しを選ばずに進む →</a>
-          </section>
-        )}
-        {route === "character-new" && (
-          <section className="card">
-            <p>
-              登録フォームの準備画面です。入力は試せますが、まだ保存されません。画面を離れると消えます。
-            </p>
-            <Field
-              label="キャラクター名"
-              hint="好きな呼び名でもかまいません。"
-              maxLength={100}
-            />
-            <label className="field">
-              好きな特徴・描きたいところ
-              <textarea maxLength={2000} rows={4} />
-            </label>
-            <button disabled>登録・保存（準備中）</button>
-            <p>
-              <a href="#/characters">推し一覧に戻る</a>
-            </p>
-          </section>
+        {route === "characters" && <CharactersPage notice={notice} />}
+        {(route === "character-new" || route === "character-edit") && (
+          <CharacterEditor
+            key={hash}
+            id={
+              route === "character-edit"
+                ? (characterId ?? "invalid-id")
+                : undefined
+            }
+            onSaved={setNotice}
+            onMissing={setMissingId}
+          />
         )}
         {route === "new" && (
           <section className="card">
+            <SelectedCharacter />
             <p>
               テーマを決めても、決めなくても。自分のペースで始められる場所を準備しています。
             </p>
@@ -225,11 +263,11 @@ export function App() {
             </p>
             <button onClick={() => setSheet(true)}>保存の仕組みを読む</button>
             <p className="note">
-              作品保存・バックアップ・復元は後の工程で追加します。現在は保存基盤のみです。
+              推しの名前・メモ・参考画像を保存できます。作品保存・バックアップ・復元は後の工程で追加します。
             </p>
           </section>
         )}
-        {["not-found", "work-missing", "character-missing"].includes(route) && (
+        {["not-found", "work-missing"].includes(route) && (
           <section className="card">
             <p>URLが違うか、まだ登録されていないデータです。</p>
             <a className="button primary" href="#/">

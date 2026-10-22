@@ -6,7 +6,7 @@ describe("ハッシュルート", () => {
     ["#/", "home"],
     ["#/characters", "characters"],
     ["#/characters/new", "character-new"],
-    ["#/characters/missing", "character-missing"],
+    ["#/characters/missing", "character-edit"],
     ["#/new", "new"],
     ["#/draw/new", "draw"],
     ["#/draw/missing", "work-missing"],

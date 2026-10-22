@@ -119,6 +119,7 @@ test("各画面の操作で不要な外部リクエストと未処理エラー�
       await page
         .getByLabel("好きな特徴・描きたいところ")
         .fill("笑っている表情を描いてみたい");
+      page.once("dialog", (dialog) => dialog.accept());
     }
     if (hash === "#/settings/data") {
       await expect(page.getByRole("status")).toContainText(

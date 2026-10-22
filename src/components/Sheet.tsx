@@ -3,10 +3,12 @@ export function Sheet({
   title,
   onClose,
   children,
+  closeDisabled = false,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  closeDisabled?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
@@ -23,7 +25,10 @@ export function Sheet({
     <dialog
       ref={ref}
       aria-labelledby={id}
-      onCancel={onClose}
+      onCancel={(event) => {
+        event.preventDefault();
+        if (!closeDisabled) onClose();
+      }}
       onKeyDown={(event) => {
         if (event.key !== "Tab") return;
         const items = Array.from(
@@ -44,7 +49,12 @@ export function Sheet({
     >
       <div className="sheet-heading">
         <h2 id={id}>{title}</h2>
-        <button onClick={onClose} autoFocus aria-label="閉じる">
+        <button
+          onClick={onClose}
+          disabled={closeDisabled}
+          autoFocus
+          aria-label="閉じる"
+        >
           閉じる
         </button>
       </div>

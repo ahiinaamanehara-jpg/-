@@ -6,16 +6,15 @@ test("320pxで空状態から画面遷移・戻る・再読込", async ({ page }
     "好き、からはじめよう。",
   );
   await page.getByRole("link", { name: "好きなキャラクターを選ぶ" }).click();
-  await page.getByRole("link", { name: "登録画面を開く" }).click();
+  await page.getByRole("link", { name: "推しを登録する" }).click();
   await page.getByLabel("キャラクター名").fill("好きな人");
-  await expect(
-    page.getByRole("button", { name: "登録・保存（準備中）" }),
-  ).toBeDisabled();
-  await page.goBack();
+  await page.getByRole("button", { name: "登録して保存" }).click();
+  await expect(page).toHaveURL(/#\/characters$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "推しのノート",
   );
   await page.getByRole("link", { name: "推しを選ばずに進む" }).click();
+  await expect(page).toHaveURL(/#\/new$/);
   await page.reload();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(
     "今日は、どんな姿に？",
@@ -54,7 +53,7 @@ test("直接URL・見つからないデータ・DBの非破壊再接続", async 
   );
   await page.evaluate(async () => {
     await new Promise<void>((resolve, reject) => {
-      const req = indexedDB.open("suki-sketch", 1);
+      const req = indexedDB.open("suki-sketch");
       req.onsuccess = () => {
         const db = req.result;
         const tx = db.transaction("settings", "readwrite");
@@ -75,7 +74,7 @@ test("直接URL・見つからないデータ・DBの非破壊再接続", async 
     await page.evaluate(
       () =>
         new Promise((resolve) => {
-          const r = indexedDB.open("suki-sketch", 1);
+          const r = indexedDB.open("suki-sketch");
           r.onsuccess = () => {
             const db = r.result;
             const tx = db.transaction("settings");
