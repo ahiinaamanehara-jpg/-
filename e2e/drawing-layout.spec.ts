@@ -160,8 +160,24 @@ test("320／360px幅の文字200%でも道具が欠けず、スクロールと�
     page.getByRole("button", { name: "消しゴム", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   const save = page.getByRole("button", { name: "途中で保存", exact: true });
-  for (let i = 0; i < 4; i++) await page.keyboard.press("Tab");
-  await expect(save).toBeFocused();
+  const visited: string[] = [];
+  // 色入力の内部フォーカス等はブラウザーで異なる。保存へ直接focusは移さず、
+  // 実際のTab順で到達できることを確認する。
+  for (let i = 0; i < 12; i++) {
+    if (await save.evaluate((el) => el === document.activeElement)) break;
+    visited.push(
+      await page.evaluate(
+        () =>
+          `${document.activeElement?.tagName}: ${document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.textContent?.trim().slice(0, 60)}`,
+      ),
+    );
+    await page.keyboard.press("Tab");
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    );
+  }
+  await expect(save, JSON.stringify(visited)).toBeFocused();
   await page.keyboard.press("Enter");
   await expectSaved(page);
   await expectCanvasUnchanged(page, drawn);
