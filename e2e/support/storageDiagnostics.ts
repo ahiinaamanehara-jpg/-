@@ -1,4 +1,9 @@
 import { expect, type Page } from "@playwright/test";
+import { PNG_ENCODING_TIMEOUT_MS } from "../../src/images/png";
+
+// PNG準備には15秒の期限がある。完了直前に5秒の既定assertで打ち切らず、
+// その後のDB保存も待つ。成功条件・画像比較やアプリの期限は変更しない。
+export const DRAWING_SAVE_TIMEOUT_MS = PNG_ENCODING_TIMEOUT_MS + 5_000;
 
 interface StorageDiagnostic {
   store: string;
@@ -50,15 +55,18 @@ export async function observeStorageErrors(page: Page) {
 
 export async function expectSaved(page: Page) {
   await expect
-    .poll(async () => ({
-      status: await page.locator(".save-status").textContent(),
-      alerts: await page.getByRole("alert").allTextContents(),
-      storageErrors: await page.evaluate(
-        () =>
-          (window as unknown as { storageDiagnostics: StorageDiagnostic[] })
-            .storageDiagnostics,
-      ),
-    }))
+    .poll(
+      async () => ({
+        status: await page.locator(".save-status").textContent(),
+        alerts: await page.getByRole("alert").allTextContents(),
+        storageErrors: await page.evaluate(
+          () =>
+            (window as unknown as { storageDiagnostics: StorageDiagnostic[] })
+              .storageDiagnostics,
+        ),
+      }),
+      { timeout: DRAWING_SAVE_TIMEOUT_MS },
+    )
     .toEqual({ status: "保存済み", alerts: [], storageErrors: [] });
 }
 

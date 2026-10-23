@@ -622,8 +622,17 @@ textarea {
 .drawing-tools {
   background: #fffdf8;
   border: 1px solid #d0c3b0;
-  padding: 16px;
+  padding: 12px;
   border-radius: 14px;
+}
+.drawing-tool-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 5rem), 1fr));
+  gap: 6px;
+}
+.drawing-tool-buttons button {
+  min-width: 0;
+  padding: 8px 4px;
 }
 .drawing-tools button[aria-pressed="true"] {
   background: #805236;

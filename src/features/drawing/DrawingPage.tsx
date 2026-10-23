@@ -540,12 +540,9 @@ function DrawingEditor({ data }: { data: DrawingData }) {
           描画にはCanvasに対応したブラウザーが必要です。
         </canvas>
       </div>
-      <p id="canvas-help" className="note">
-        指・ペン・マウスで描けます。自由描画はポインター操作が必要です。キャンバスの外は通常どおりスクロールできます。
-      </p>
       <fieldset className="drawing-tools" disabled={disabled}>
         <legend className="sr-only">描画の道具</legend>
-        <div role="group" aria-label="道具" className="actions">
+        <div role="group" aria-label="道具" className="drawing-tool-buttons">
           <button
             type="button"
             aria-pressed={tools.tool === "pen"}
@@ -653,6 +650,9 @@ function DrawingEditor({ data }: { data: DrawingData }) {
           {exporting ? "PNGを準備中…" : "PNGを書き出す"}
         </button>
       </div>
+      <p id="canvas-help" className="note">
+        指・ペン・マウスで描けます。自由描画はポインター操作が必要です。キャンバスの外は通常どおりスクロールできます。
+      </p>
       <div className="actions drawing-support">
         <button
           disabled={disabled}

@@ -1,5 +1,20 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { DRAWING_SAVE_TIMEOUT_MS } from "./support/storageDiagnostics";
+import {
+  observePngEncoding,
+  pngEncodingTimings,
+} from "./support/pngDiagnostics";
+
+test.beforeEach(async ({ page }) => observePngEncoding(page));
+test.afterEach(async ({ page }, info) => {
+  if (info.status !== info.expectedStatus && !page.isClosed()) {
+    await info.attach("png-encoding-timings.json", {
+      body: JSON.stringify(await pngEncodingTimings(page), null, 2),
+      contentType: "application/json",
+    });
+  }
+});
 
 async function start(page: Page) {
   await page.goto("#/new");
@@ -38,7 +53,9 @@ async function pixel(page: Page, x = 0.5, y = 0.5) {
 }
 async function save(page: Page) {
   await page.getByRole("button", { name: "途中で保存", exact: true }).click();
-  await expect(page.locator(".save-status")).toHaveText("保存済み");
+  await expect(page.locator(".save-status")).toHaveText("保存済み", {
+    timeout: DRAWING_SAVE_TIMEOUT_MS,
+  });
 }
 async function stored(page: Page) {
   return page.evaluate(
@@ -121,7 +138,9 @@ test("自動保存して再開すると画像・道具が戻り取り消し履�
   await start(page);
   await page.getByLabel("ペンの色", { exact: true }).fill("#1234ab");
   await line(page);
-  await expect(page.locator(".save-status")).toHaveText("保存済み");
+  await expect(page.locator(".save-status")).toHaveText("保存済み", {
+    timeout: DRAWING_SAVE_TIMEOUT_MS,
+  });
   expect((await stored(page)).artworks[0].canvasAssetId).toBeTruthy();
   await page.reload();
   await expect(
@@ -325,7 +344,9 @@ test("保存前の画面移動は保存を待ってから再開できる", async
     .getByRole("navigation")
     .getByRole("link", { name: "作品の棚" })
     .click();
-  await expect(page).toHaveURL(/#\/$/);
+  await expect(page).toHaveURL(/#\/$/, {
+    timeout: DRAWING_SAVE_TIMEOUT_MS,
+  });
   await page.getByRole("link", { name: "続きから描く" }).click();
   await expect(
     page.getByRole("button", { name: "ペン", exact: true }),
