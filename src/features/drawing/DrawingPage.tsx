@@ -15,8 +15,15 @@ import {
   type ReferenceAsset,
 } from "../../data/characters";
 import { loadDrawingBitmap, createDrawingCopy } from "../../data/drawings";
-import type { ArtworkDraft } from "../../data/database";
+import type { ArtworkDraft, GuideAsset } from "../../data/database";
 import { prepareReferenceImage } from "../../data/images";
+import { loadTracingGuide, makeGuideAsset } from "../../data/tracing";
+import {
+  DEFAULT_TRACING_OPACITY,
+  type TracingSettings,
+} from "../../drawing/tracing";
+import { BlobImage } from "../../components/BlobImage";
+import { TracingControls } from "./TracingControls";
 import {
   DrawingSurface,
   canvasPoint,
@@ -44,6 +51,8 @@ interface DrawingData {
   bitmap?: Blob;
   character?: Character;
   reference?: ReferenceAsset;
+  guide?: GuideAsset;
+  guideWarning?: string;
   warning?: string;
 }
 const SCRATCH: DrawingData = {};
@@ -64,6 +73,14 @@ export function DrawingPage({
       .then(async (draft) => {
         if (!draft) return null;
         const bitmap = await loadDrawingBitmap(draft);
+        let guide: GuideAsset | undefined,
+          guideWarning = "";
+        try {
+          guide = await loadTracingGuide(draft);
+        } catch {
+          guideWarning =
+            "下絵を読み込めません。描いた線は保持しています。下絵を選び直すか、外して続けられます。";
+        }
         let character: Character | undefined,
           reference: ReferenceAsset | undefined,
           warning = "";
@@ -85,7 +102,15 @@ export function DrawingPage({
             warning = drawingError(error);
           }
         }
-        return { draft, bitmap, character, reference, warning };
+        return {
+          draft,
+          bitmap,
+          character,
+          reference,
+          warning,
+          guide,
+          guideWarning,
+        };
       })
       .then((result) => {
         if (active) {
@@ -157,6 +182,9 @@ function DrawingEditor({ data }: { data: DrawingData }) {
   const exportRef = useRef<string | undefined>(undefined);
   const [exporting, setExporting] = useState(false);
   const [showReference, setShowReference] = useState(false);
+  const [guide, setGuide] = useState(data.guide);
+  const [tracing, setTracing] = useState(data.draft?.tracing);
+  const [guideWarning, setGuideWarning] = useState(data.guideWarning ?? "");
   const reference = useRef<HTMLImageElement>(null);
   const [overlay, setOverlay] = useState<"hints" | "reflection">();
   const [openingReflection, setOpeningReflection] = useState(false);
@@ -178,6 +206,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
           data.draft,
           { ...(data.draft?.tools ?? DEFAULT_TOOLS) },
           setSaveState,
+          data.guide,
         );
         session.current = controller;
         if (data.bitmap) await surface.load(data.bitmap);
@@ -344,6 +373,49 @@ function DrawingEditor({ data }: { data: DrawingData }) {
     finishStroke();
     await session.current?.flush(true);
   };
+  const changeTracing = (settings?: TracingSettings) => {
+    setTracing(settings);
+    session.current?.setTracing({
+      settings,
+      asset: settings ? guide : undefined,
+    });
+    if (!settings) {
+      setGuide(undefined);
+      setGuideWarning("");
+    }
+  };
+  const chooseGuide = async (source: File | ReferenceAsset) => {
+    const controller = session.current;
+    if (!controller || importingRef.current) return;
+    if (
+      tracing &&
+      !window.confirm("下絵を入れ替えますか？描いた線はそのまま残ります。")
+    )
+      return;
+    finishStroke();
+    importingRef.current = true;
+    setImporting(true);
+    setActionError("");
+    try {
+      const image =
+        source instanceof File ? await prepareReferenceImage(source) : source;
+      const asset = await makeGuideAsset(image);
+      const settings = {
+        assetId: asset.id,
+        opacity: DEFAULT_TRACING_OPACITY,
+        visible: true,
+      };
+      setGuide(asset);
+      setTracing(settings);
+      setGuideWarning("");
+      controller.setTracing({ settings, asset });
+    } catch (error) {
+      setActionError(drawingError(error));
+    } finally {
+      importingRef.current = false;
+      setImporting(false);
+    }
+  };
   const openReflection = async () => {
     const controller = session.current;
     if (!controller?.draft || openingReflectionRef.current) return;
@@ -375,6 +447,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
         controller.tools,
         undefined,
         controller.draft,
+        controller.tracing,
       );
       allowLeave.current = true;
       window.location.hash = `/draw/${next.id}`;
@@ -405,6 +478,8 @@ function DrawingEditor({ data }: { data: DrawingData }) {
         bundle,
         controller.tools,
         controller.draft.revision,
+        undefined,
+        {},
       );
       rememberImport(next.id);
       allowLeave.current = true;
@@ -518,7 +593,38 @@ function DrawingEditor({ data }: { data: DrawingData }) {
           alt={`${data.character?.name ?? "推し"}の参考画像`}
         />
       )}
-      <div className="canvas-frame">
+      <TracingControls
+        settings={tracing}
+        guide={guide}
+        hasReference={Boolean(data.reference)}
+        disabled={disabled}
+        warning={guideWarning}
+        onFile={(event) => {
+          const file = event.currentTarget.files?.[0];
+          event.currentTarget.value = "";
+          if (file) void chooseGuide(file);
+        }}
+        onReference={() => {
+          if (data.reference) void chooseGuide(data.reference);
+        }}
+        onSettings={changeTracing}
+        onRemove={() => {
+          if (window.confirm("下絵を外しますか？描いた線はそのまま残ります。"))
+            changeTracing();
+        }}
+      />
+      <div
+        className={`canvas-frame${guide && tracing?.visible ? " tracing-visible" : ""}`}
+      >
+        {guide && tracing?.visible && (
+          <BlobImage
+            blob={guide.blob}
+            alt=""
+            aria-hidden="true"
+            className="tracing-underlay"
+            style={{ opacity: tracing.opacity / 100 }}
+          />
+        )}
         <canvas
           ref={canvas}
           width={960}

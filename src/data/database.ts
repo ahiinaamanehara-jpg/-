@@ -2,6 +2,7 @@ import { isDrawingTools, type DrawingTools } from "../drawing/tools";
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Reflection } from "./reflectionTypes";
 import type { QuestionId } from "./reflectionQuestions";
+import { isTracingSettings, type TracingSettings } from "../drawing/tracing";
 
 export interface Character {
   id: string;
@@ -32,7 +33,10 @@ export interface ArtworkAsset {
   width: number;
   height: number;
 }
-export type StoredAsset = ReferenceAsset | ArtworkAsset;
+export interface GuideAsset extends Omit<ReferenceAsset, "kind"> {
+  kind: "guide";
+}
+export type StoredAsset = ReferenceAsset | ArtworkAsset | GuideAsset;
 
 export type ThemeCategory = "expression" | "costume" | "pose" | "free";
 
@@ -45,6 +49,7 @@ export interface ArtworkDraft {
   canvasAssetId?: string;
   thumbnailAssetId?: string;
   tools?: DrawingTools;
+  tracing?: TracingSettings;
   width: 960;
   height: 960;
   createdAt: string;
@@ -62,6 +67,18 @@ export interface WorkshopDB extends DBSchema {
     value: Reflection;
     indexes: { "by-artwork": string; "by-question": [string, QuestionId] };
   };
+}
+
+export function referencesAsset(
+  record: ArtworkDraft | { referenceAssetId?: string },
+  id: string,
+) {
+  return (
+    ("canvasAssetId" in record && record.canvasAssetId === id) ||
+    ("thumbnailAssetId" in record && record.thumbnailAssetId === id) ||
+    ("tracing" in record && record.tracing?.assetId === id) ||
+    ("referenceAssetId" in record && record.referenceAssetId === id)
+  );
 }
 
 export class StorageSchemaError extends Error {
@@ -94,6 +111,10 @@ export function validateArtworkDraft(value: ArtworkDraft): ArtworkDraft {
     (value.canvasAssetId !== undefined &&
       value.canvasAssetId === value.thumbnailAssetId) ||
     (value.tools !== undefined && !isDrawingTools(value.tools)) ||
+    (value.tracing !== undefined &&
+      (!isTracingSettings(value.tracing) ||
+        value.tracing.assetId === value.canvasAssetId ||
+        value.tracing.assetId === value.thumbnailAssetId)) ||
     value.width !== 960 ||
     value.height !== 960 ||
     typeof value.createdAt !== "string" ||

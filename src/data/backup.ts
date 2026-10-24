@@ -34,7 +34,7 @@ interface AssetRecord {
 }
 interface Manifest {
   format: "suki-sketch";
-  version: 1;
+  version: 1 | 2;
   createdAt: string;
   characters: Character[];
   artworks: ArtworkDraft[];
@@ -68,6 +68,7 @@ const artworkKeys = [
   "canvasAssetId",
   "thumbnailAssetId",
   "tools",
+  "tracing",
   "width",
   "height",
   "createdAt",
@@ -123,6 +124,7 @@ function validateGraph(
     if (a.characterId && !characters.has(a.characterId)) throw backupError();
     link(a.canvasAssetId, "canvas");
     link(a.thumbnailAssetId, "thumbnail");
+    link(a.tracing?.assetId, "guide");
   }
   for (const r of reflections.values()) {
     if (
@@ -138,7 +140,7 @@ function validateGraph(
   }
   for (const a of assets.values()) {
     if (
-      !["canvas", "thumbnail", "reference"].includes(a.kind) ||
+      !["canvas", "thumbnail", "reference", "guide"].includes(a.kind) ||
       a.mime !== "image/png" ||
       !Number.isSafeInteger(a.size) ||
       a.size < 1 ||
@@ -205,7 +207,7 @@ export function validateManifest(raw: unknown): Manifest {
   const m = raw as Manifest;
   if (
     m.format !== "suki-sketch" ||
-    m.version !== 1 ||
+    ![1, 2].includes(m.version) ||
     typeof m.createdAt !== "string" ||
     !Number.isFinite(Date.parse(m.createdAt)) ||
     ![m.characters, m.artworks, m.reflections, m.assets, m.settings].every(
@@ -214,12 +216,23 @@ export function validateManifest(raw: unknown): Manifest {
   )
     throw backupError();
   try {
+    if (
+      m.version === 1 &&
+      (m.artworks.some((a) => a?.tracing !== undefined) ||
+        m.assets.some((a) => a?.kind === "guide"))
+    )
+      throw backupError();
     const data: Manifest = {
       format: "suki-sketch",
-      version: 1,
+      version: m.version,
       createdAt: m.createdAt,
       characters: m.characters.map((r) => pick(r, characterKeys)),
-      artworks: m.artworks.map((r) => pick(r, artworkKeys)),
+      artworks: m.artworks.map((r) => {
+        const row = pick(r, artworkKeys);
+        if (row.tracing)
+          row.tracing = pick(row.tracing, ["assetId", "opacity", "visible"]);
+        return row;
+      }),
       reflections: m.reflections.map((r) => pick(r, reflectionKeys)),
       assets: m.assets.map((r) => pick(r, assetKeys)),
       settings: m.settings.map((r) => pick(r, ["key", "value"])),
@@ -263,7 +276,7 @@ export async function exportBackup() {
   const manifest = validateManifest({
     ...source,
     format: "suki-sketch",
-    version: 1,
+    version: 2,
     createdAt: new Date().toISOString(),
     assets: source.assets.map((a, i) => ({ ...a, file: `assets/${i}.png` })),
   });
@@ -390,6 +403,9 @@ export async function restoreBackup(plan: RestorePlan) {
           canvasAssetId: mapId("s", a.canvasAssetId),
           thumbnailAssetId: mapId("s", a.thumbnailAssetId!),
         }
+      : {}),
+    ...(a.tracing
+      ? { tracing: { ...a.tracing, assetId: mapId("s", a.tracing.assetId) } }
       : {}),
   }));
   const reflections = source.reflections.map((r) => ({

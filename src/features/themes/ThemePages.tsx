@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   listCharacters,
   getSelectedCharacterId,
+  loadCharacter,
   type Character,
 } from "../../data/characters";
 import {
@@ -15,6 +16,8 @@ import {
   type ThemeCategory,
 } from "../../data/themes";
 import { registerNavigationGuard } from "../../navigation";
+import { prepareReferenceImage, type PreparedImage } from "../../data/images";
+import { BlobImage } from "../../components/BlobImage";
 
 function describeError(error: unknown) {
   if (error instanceof DOMException && error.name === "QuotaExceededError")
@@ -36,6 +39,10 @@ export function ThemePage() {
     suggestThemes("expression"),
   );
   const [theme, setTheme] = useState("");
+  const [mode, setMode] = useState<"blank" | "trace">("blank");
+  const [guide, setGuide] = useState<PreparedImage>();
+  const [guideName, setGuideName] = useState("");
+  const [preparing, setPreparing] = useState(false);
   const [themeCategory, setThemeCategory] = useState<ThemeCategory | null>(
     null,
   );
@@ -45,7 +52,11 @@ export function ThemePage() {
   const initialized = useRef(false);
   const saving = useRef(false);
   const saved = useRef(false);
-  const dirty = theme !== "" || characterId !== initialCharacterId;
+  const dirty =
+    theme !== "" ||
+    characterId !== initialCharacterId ||
+    mode === "trace" ||
+    Boolean(guide);
   useEffect(() => {
     let active = true;
     let sequence = 0;
@@ -109,15 +120,24 @@ export function ThemePage() {
       setError("テーマは500文字以内で入力してください。");
       return;
     }
+    if (mode === "trace" && !guide) {
+      setError(
+        "下絵にする画像を選んでください。画像なしなら「白紙から描く」で進めます。",
+      );
+      return;
+    }
     saving.current = true;
     setBusy(true);
     setError("");
     try {
-      const draft = await createDraft({
-        characterId: characterId || undefined,
-        theme: skip ? "" : theme,
-        themeCategory: skip || !theme.trim() ? null : themeCategory,
-      });
+      const draft = await createDraft(
+        {
+          characterId: characterId || undefined,
+          theme: skip ? "" : theme,
+          themeCategory: skip || !theme.trim() ? null : themeCategory,
+        },
+        mode === "trace" ? guide : undefined,
+      );
       saved.current = true;
       window.location.hash = `/draw/${encodeURIComponent(draft.id)}`;
     } catch (error) {
@@ -126,6 +146,34 @@ export function ThemePage() {
       setError(
         `保存できませんでした。${describeError(error)} 入力したテーマはこの画面に残っています。`,
       );
+    }
+  };
+  const prepareGuide = async (source: File | "reference") => {
+    if (saving.current || !ready) return;
+    saving.current = true;
+    setPreparing(true);
+    setError("");
+    try {
+      if (source === "reference") {
+        const record = await loadCharacter(characterId);
+        if (!record?.asset)
+          throw new Error(
+            "参考画像を読み込めません。端末の画像を選び直せます。",
+          );
+        setGuide(record.asset);
+        setGuideName(`${record.character.name}の参考画像`);
+      } else {
+        const image = await prepareReferenceImage(source);
+        setGuide(image);
+        setGuideName(source.name);
+      }
+    } catch (error) {
+      setError(
+        `${describeError(error)} すでに選んだ下絵やテーマは残っています。`,
+      );
+    } finally {
+      saving.current = false;
+      setPreparing(false);
     }
   };
   const missingSelection =
@@ -153,7 +201,7 @@ export function ThemePage() {
         <p role="status">推しのノートを読み込んでいます…</p>
       )}
       <form onSubmit={submit}>
-        <fieldset disabled={!ready || busy}>
+        <fieldset disabled={!ready || busy || preparing}>
           <legend className="sr-only">今回の創作テーマ</legend>
           <div className="field">
             <label htmlFor="theme-character">描くキャラクター</label>
@@ -180,6 +228,80 @@ export function ThemePage() {
               選んだ推しは別の画面で削除された可能性があります。選び直すか、推しを選ばずに進めます。入力したテーマは残っています。
             </p>
           )}
+          <fieldset className="start-method">
+            <legend>描きはじめ方</legend>
+            <div className="start-options">
+              <label>
+                <input
+                  type="radio"
+                  name="start-method"
+                  checked={mode === "blank"}
+                  onChange={() => setMode("blank")}
+                />
+                白紙から描く
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="start-method"
+                  checked={mode === "trace"}
+                  onChange={() => setMode("trace")}
+                />
+                下絵をなぞって描く
+              </label>
+            </div>
+            {mode === "trace" && (
+              <div className="tracing-setup">
+                <p>
+                  画像を薄く表示し、目印をなぞって自分で線を描きます。顔や好きな部分だけでも、途中でやめても大丈夫です。
+                </p>
+                {characters.find((c) => c.id === characterId)
+                  ?.referenceAssetId && (
+                  <button
+                    type="button"
+                    onClick={() => void prepareGuide("reference")}
+                  >
+                    推しの参考画像を使う
+                  </button>
+                )}
+                <label className="tracing-file">
+                  下絵にする画像を選ぶ
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(event) => {
+                      const file = event.currentTarget.files?.[0];
+                      event.currentTarget.value = "";
+                      if (file) void prepareGuide(file);
+                    }}
+                  />
+                </label>
+                <p className="note">
+                  自分の画像や利用できる画像を選びます。PNG・JPEG・WebP、10MiB・1,600万画素まで。画像は端末内で扱います。
+                </p>
+                {guide && (
+                  <>
+                    <BlobImage
+                      blob={guide.blob}
+                      alt="選んだ下絵"
+                      className="tracing-preview"
+                    />
+                    <p role="status">選んだ下絵：{guideName}</p>
+                    <button
+                      type="button"
+                      className="primary"
+                      onClick={() => void save()}
+                    >
+                      この下絵で描きはじめる
+                    </button>
+                  </>
+                )}
+                <p className="note">
+                  下絵の濃さは描く画面で変えられます。PNGには自分で描いた線だけを書き出します。
+                </p>
+              </div>
+            )}
+          </fieldset>
           <fieldset className="category-fieldset">
             <legend>お題の種類</legend>
             <div className="theme-categories">
@@ -274,7 +396,13 @@ export function ThemePage() {
               {error}
             </p>
           )}
-          {busy && <p role="status">推しとテーマを保存しています…</p>}
+          {(busy || preparing) && (
+            <p role="status">
+              {preparing
+                ? "下絵の画像を準備しています…"
+                : "推しとテーマを保存しています…"}
+            </p>
+          )}
           <div className="actions form-actions">
             <button type="submit" className="primary">
               {busy ? "保存しています…" : "このテーマで進む"}

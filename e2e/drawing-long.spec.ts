@@ -1,12 +1,42 @@
 import { test, expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
+import { DRAWING_SAVE_TIMEOUT_MS } from "./support/storageDiagnostics";
 
-test("5分間の反復描画・定期保存・履歴上限・再開", async ({ page }, info) => {
+const withGuide = process.env.PLAYWRIGHT_TRACING_STRESS === "1";
+
+test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ? "（1600pxの下絵あり）" : ""}`, async ({
+  page,
+}, info) => {
   test.setTimeout(380_000);
   await page.setViewportSize({ width: 375, height: 812 });
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("#/new");
+  if (withGuide) {
+    await page
+      .getByRole("radio", { name: "下絵をなぞって描く", exact: true })
+      .check();
+    const png = await page.evaluate(() => {
+      const c = document.createElement("canvas");
+      c.width = 1600;
+      c.height = 800;
+      const ctx = c.getContext("2d")!;
+      ctx.strokeStyle = "#aa3322";
+      ctx.lineWidth = 12;
+      ctx.strokeRect(200, 120, 1200, 560);
+      return c.toDataURL().split(",")[1];
+    });
+    await page
+      .getByLabel("下絵にする画像を選ぶ", { exact: true })
+      .setInputFiles({
+        name: "guide.png",
+        mimeType: "image/png",
+        buffer: Buffer.from(png, "base64"),
+      });
+    await expect(
+      page.getByRole("img", { name: "選んだ下絵", exact: true }),
+    ).toBeVisible();
+  }
   await page
     .getByRole("button", { name: "テーマを決めずに進む", exact: true })
     .click();
@@ -63,7 +93,7 @@ test("5分間の反復描画・定期保存・履歴上限・再開", async ({ p
     if (Date.now() - checkpoint > 20_000) {
       const saved = await snapshot();
       expect(saved.revision).toBeGreaterThan(revision);
-      expect(saved.assets).toBe(2);
+      expect(saved.assets).toBe(withGuide ? 3 : 2);
       revision = saved.revision;
       checkpoint = Date.now();
     }
@@ -73,12 +103,15 @@ test("5分間の反復描画・定期保存・履歴上限・再開", async ({ p
   const elapsedMs = Date.now() - started;
   expect(strokes).toBeGreaterThan(300);
   await page.getByRole("button", { name: "途中で保存", exact: true }).click();
-  await expect(page.locator(".save-status")).toHaveText("保存済み");
+  await expect(page.locator(".save-status")).toHaveText("保存済み", {
+    timeout: DRAWING_SAVE_TIMEOUT_MS,
+  });
   const frames = await page.evaluate(
     () => (window as unknown as { drawingFrames: number[] }).drawingFrames,
   );
   frames.sort((a, b) => a - b);
   const stats = {
+    withGuide,
     elapsedMs,
     strokes,
     saved: await snapshot(),
@@ -101,12 +134,15 @@ test("5分間の反復描画・定期保存・履歴上限・再開", async ({ p
   }
   expect(undone).toBe(9);
   await page.getByRole("button", { name: "途中で保存", exact: true }).click();
-  await expect(page.locator(".save-status")).toHaveText("保存済み");
+  await expect(page.locator(".save-status")).toHaveText("保存済み", {
+    timeout: DRAWING_SAVE_TIMEOUT_MS,
+  });
   const before = await canvas.evaluate((node) =>
     (node as HTMLCanvasElement).toDataURL(),
   );
   await page.reload();
   await expect(pen).toBeEnabled();
+  if (withGuide) await expect(page.locator(".tracing-underlay")).toBeVisible();
   expect(
     await canvas.evaluate((node) => (node as HTMLCanvasElement).toDataURL()),
   ).toBe(before);

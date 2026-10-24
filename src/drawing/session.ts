@@ -1,5 +1,6 @@
 import { saveDrawing } from "../data/drawings";
-import type { ArtworkDraft } from "../data/database";
+import type { ArtworkDraft, GuideAsset } from "../data/database";
+import type { TracingUpdate } from "./tracing";
 import { captureDrawing, DrawingSurface } from "./surface";
 import type { DrawingTools } from "./tools";
 
@@ -25,13 +26,19 @@ export class DrawingSession {
   private disposed = false;
   private state: SaveState["status"];
   strokeActive = false;
+  tracing: TracingUpdate;
   constructor(
     readonly surface: DrawingSurface,
     public draft: ArtworkDraft | undefined,
     public tools: DrawingTools,
     private notify: (state: SaveState) => void,
+    guide?: GuideAsset,
   ) {
     this.state = draft ? "saved" : "scratch";
+    this.tracing = {
+      settings: draft?.tracing ? { ...draft.tracing } : undefined,
+      asset: guide,
+    };
   }
   get dirty() {
     return this.version !== this.savedVersion || this.strokeActive;
@@ -48,6 +55,13 @@ export class DrawingSession {
   }
   setTools(tools: DrawingTools) {
     this.tools = { ...tools };
+    this.changed();
+  }
+  setTracing(update: TracingUpdate) {
+    this.tracing = {
+      settings: update.settings ? { ...update.settings } : undefined,
+      asset: update.asset,
+    };
     this.changed();
   }
   started() {
@@ -87,6 +101,12 @@ export class DrawingSession {
       while (this.dirty && !this.strokeActive && !this.disposed) {
         const version = this.version;
         const tools = { ...this.tools };
+        const tracing = {
+          ...this.tracing,
+          settings: this.tracing.settings
+            ? { ...this.tracing.settings }
+            : undefined,
+        };
         this.state = "saving";
         this.emit();
         try {
@@ -97,6 +117,7 @@ export class DrawingSession {
             this.draft!.revision,
             bundle,
             tools,
+            tracing,
           );
           this.savedVersion = version;
           this.state = this.dirty ? "pending" : "saved";

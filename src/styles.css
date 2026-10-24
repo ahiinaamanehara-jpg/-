@@ -602,6 +602,7 @@ textarea {
   border-color: #b66c62;
 }
 .canvas-frame {
+  position: relative;
   background: #fff;
   border: 1px solid #a1917b;
   border-radius: 10px;
@@ -611,6 +612,7 @@ textarea {
   line-height: 0;
 }
 .canvas-frame canvas {
+  position: relative;
   display: block;
   width: 100%;
   height: auto;
@@ -618,6 +620,95 @@ textarea {
   touch-action: none;
   cursor: crosshair;
   background: #fff;
+}
+.canvas-frame.tracing-visible canvas {
+  background: transparent;
+}
+.tracing-underlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+.start-method {
+  margin: 24px 0;
+  min-width: 0;
+}
+.start-method legend {
+  font-weight: 650;
+}
+.start-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+}
+.start-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.start-options input {
+  width: 24px;
+  height: 24px;
+  accent-color: #805236;
+}
+.tracing-controls {
+  margin: 16px 0;
+}
+.tracing-controls summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 8px 0;
+  color: #75472e;
+}
+.tracing-controls fieldset,
+.tracing-setup {
+  min-width: 0;
+}
+.tracing-file {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+}
+.tracing-file input {
+  min-height: 44px;
+  max-width: 100%;
+  width: 100%;
+}
+.tracing-preview {
+  display: block;
+  width: 160px;
+  max-width: 100%;
+  max-height: 160px;
+  object-fit: contain;
+  background: white;
+  margin: 12px 0;
+}
+.tracing-opacity {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+}
+.tracing-opacity input {
+  min-height: 44px;
+  max-width: 100%;
+  accent-color: #805236;
+}
+.tracing-indicator {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.tracing-indicator p {
+  margin: 0;
 }
 .drawing-tools {
   background: #fffdf8;

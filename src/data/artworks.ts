@@ -1,5 +1,6 @@
 import {
   openWorkshopDB,
+  referencesAsset,
   validateArtworkDraft,
   StorageSchemaError,
   type ArtworkDraft,
@@ -142,17 +143,6 @@ export async function setArtworkStatus(
     db.close();
   }
 }
-/** 画像が別データにも参照されていたら残す。不正な参照でも他作品を消さない。 */
-export function referencesAsset(
-  record: ArtworkDraft | { referenceAssetId?: string },
-  id: string,
-) {
-  return (
-    ("canvasAssetId" in record && record.canvasAssetId === id) ||
-    ("thumbnailAssetId" in record && record.thumbnailAssetId === id) ||
-    ("referenceAssetId" in record && record.referenceAssetId === id)
-  );
-}
 export async function deleteArtwork(id: string, expectedRevision: number) {
   const db = await openWorkshopDB();
   try {
@@ -168,7 +158,11 @@ export async function deleteArtwork(id: string, expectedRevision: number) {
         (a) => a.id !== id,
       );
       const characters = await tx.objectStore("characters").getAll();
-      for (const assetId of [work.canvasAssetId, work.thumbnailAssetId]) {
+      for (const [assetId, kind] of [
+        [work.canvasAssetId, "canvas"],
+        [work.thumbnailAssetId, "thumbnail"],
+        [work.tracing?.assetId, "guide"],
+      ] as const) {
         if (
           !assetId ||
           [...others, ...characters].some((a) => referencesAsset(a, assetId))
@@ -177,7 +171,7 @@ export async function deleteArtwork(id: string, expectedRevision: number) {
         const asset: StoredAsset | undefined = await tx
           .objectStore("assets")
           .get(assetId);
-        if (asset?.kind === "canvas" || asset?.kind === "thumbnail")
+        if (asset?.kind === kind)
           await tx.objectStore("assets").delete(assetId);
       }
       const refs = tx.objectStore("reflections");

@@ -5,6 +5,9 @@ import {
   type ArtworkDraft,
   type ThemeCategory,
 } from "./database";
+import { makeGuideAsset } from "./tracing";
+import type { PreparedImage } from "./images";
+import { DEFAULT_TRACING_OPACITY } from "../drawing/tracing";
 export type { ArtworkDraft, ThemeCategory } from "./database";
 
 const LAST_ARTWORK_KEY = "lastArtworkId";
@@ -30,6 +33,7 @@ export interface CreateDraftInput {
 
 export async function createDraft(
   input: CreateDraftInput,
+  guideImage?: PreparedImage,
 ): Promise<ArtworkDraft> {
   if (typeof input.theme !== "string" || input.theme.length > 500) {
     throw new DraftValidationError("テーマは500文字以内で入力してください。");
@@ -43,10 +47,11 @@ export async function createDraft(
   ) {
     throw new DraftValidationError("推しを選び直してください。");
   }
+  const guide = guideImage ? await makeGuideAsset(guideImage) : undefined;
   const db = await openWorkshopDB();
   try {
     const tx = db.transaction(
-      ["characters", "artworks", "settings"],
+      ["characters", "artworks", "settings", "assets"],
       "readwrite",
     );
     const operation = (async () => {
@@ -79,7 +84,17 @@ export async function createDraft(
         createdAt: now,
         updatedAt: now,
         revision: 1,
+        ...(guide
+          ? {
+              tracing: {
+                assetId: guide.id,
+                opacity: DEFAULT_TRACING_OPACITY,
+                visible: true,
+              },
+            }
+          : {}),
       };
+      if (guide) await tx.objectStore("assets").add(guide);
       await tx.objectStore("artworks").add(draft);
       await tx
         .objectStore("settings")

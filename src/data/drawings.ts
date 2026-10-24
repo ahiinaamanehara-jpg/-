@@ -1,11 +1,14 @@
 import {
   openWorkshopDB,
+  referencesAsset,
   StorageSchemaError,
   validateArtworkDraft,
   type ArtworkAsset,
   type ArtworkDraft,
   type StoredAsset,
 } from "./database";
+import { validateGuideAsset, validateGuideImage } from "./tracing";
+import { isTracingSettings, type TracingUpdate } from "../drawing/tracing";
 import { isDrawingTools, type DrawingTools } from "../drawing/tools";
 import { inspectImageDimensions } from "./images";
 
@@ -111,11 +114,22 @@ export async function saveDrawing(
   expectedRevision: number,
   bundle: DrawingBundle,
   tools: DrawingTools,
+  tracing?: TracingUpdate,
 ): Promise<ArtworkDraft> {
   await validateBundle(bundle, tools);
+  if (tracing?.settings && !isTracingSettings(tracing.settings))
+    throw new StorageSchemaError();
+  if (tracing?.asset) {
+    if (tracing.settings?.assetId !== tracing.asset.id)
+      throw new StorageSchemaError();
+    await validateGuideImage(tracing.asset);
+  }
   const db = await openWorkshopDB();
   try {
-    const tx = db.transaction(["artworks", "assets"], "readwrite");
+    const tx = db.transaction(
+      ["artworks", "assets", "characters"],
+      "readwrite",
+    );
     const operation = (async () => {
       const raw = await tx.objectStore("artworks").get(id);
       if (!raw) throw new DrawingConflictError();
@@ -146,7 +160,37 @@ export async function saveDrawing(
         updatedAt: new Date().toISOString(),
         revision: previous.revision + 1,
       };
+      if (tracing) {
+        if (tracing.settings) {
+          const id = tracing.settings.assetId;
+          const existing = await tx.objectStore("assets").get(id);
+          if (existing) {
+            if (id !== previous.tracing?.assetId)
+              throw new StorageSchemaError();
+            validateGuideAsset(existing, id);
+          } else if (tracing.asset) {
+            await tx.objectStore("assets").add(tracing.asset);
+          } else throw new StorageSchemaError();
+          next.tracing = { ...tracing.settings };
+        } else delete next.tracing;
+      }
       await tx.objectStore("artworks").put(next);
+      const previousGuideId = previous.tracing?.assetId;
+      if (previousGuideId && previousGuideId !== next.tracing?.assetId) {
+        const others = (await tx.objectStore("artworks").getAll()).filter(
+          (a) => a.id !== id,
+        );
+        const characters = await tx.objectStore("characters").getAll();
+        if (
+          ![...others, ...characters].some((a) =>
+            referencesAsset(a, previousGuideId),
+          )
+        ) {
+          const old = await tx.objectStore("assets").get(previousGuideId);
+          if (old?.kind === "guide")
+            await tx.objectStore("assets").delete(previousGuideId);
+        }
+      }
       if (previous.canvasAssetId)
         await tx.objectStore("assets").delete(previous.canvasAssetId);
       if (previous.thumbnailAssetId)
@@ -176,6 +220,7 @@ export async function createDrawingCopy(
   tools: DrawingTools,
   expectedRevision?: number,
   fallback?: ArtworkDraft,
+  tracingOverride?: TracingUpdate,
 ): Promise<ArtworkDraft> {
   await validateBundle(bundle, tools);
   const db = await openWorkshopDB();
@@ -214,6 +259,19 @@ export async function createDrawingCopy(
         updatedAt: now,
         revision: 1,
       };
+      const settings = tracingOverride
+        ? tracingOverride.settings
+        : source.tracing;
+      if (settings) {
+        if (!isTracingSettings(settings)) throw new StorageSchemaError();
+        const original =
+          tracingOverride?.asset ??
+          (await tx.objectStore("assets").get(settings.assetId));
+        validateGuideAsset(original, settings.assetId);
+        const guide = { ...original, id: crypto.randomUUID() };
+        await tx.objectStore("assets").add(guide);
+        draft.tracing = { ...settings, assetId: guide.id };
+      } else delete draft.tracing;
       if (
         draft.characterId &&
         !(await tx.objectStore("characters").get(draft.characterId))

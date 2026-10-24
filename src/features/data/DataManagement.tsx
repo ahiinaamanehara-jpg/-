@@ -135,7 +135,7 @@ export function DataManagement() {
         </p>
       )}
       <p>
-        作品・参考画像・推しのメモ・振り返りを含むZIPを、この端末へ書き出します。画像だけのPNGとは内容が異なります。
+        作品・参考画像・なぞり描きの下絵・推しのメモ・振り返りを含むZIPを、この端末へ書き出します。なぞり描きの下絵は作品のPNGには含めません。
       </p>
       {error && (
         <p role="alert" className="error">

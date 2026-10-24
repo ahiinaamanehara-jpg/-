@@ -9,6 +9,7 @@ export default defineConfig({
     "**/accessibility.spec.ts",
     "**/compatibility-storage.spec.ts",
     "**/drawing-layout.spec.ts",
+    "**/tracing.spec.ts",
   ],
   outputDir: "./test-results/compat",
   forbidOnly: Boolean(process.env.CI),
