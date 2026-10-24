@@ -55,8 +55,20 @@ export async function makeGuideAsset(
     width: image.width,
     height: image.height,
   };
-  await validateGuideImage(asset);
-  return asset;
+  const independent = await independentGuide(asset);
+  await validateGuideImage(independent);
+  return independent;
+}
+
+async function independentGuide(asset: GuideAsset): Promise<GuideAsset> {
+  validateGuideAsset(asset, asset.id);
+  // 保存済みBlobの参照を再利用せず、元画像の差替え・削除から独立させる。
+  const bytes = await asset.blob.arrayBuffer();
+  return { ...asset, blob: new Blob([bytes], { type: "image/png" }) };
+}
+
+export async function cloneGuideAsset(asset: GuideAsset): Promise<GuideAsset> {
+  return { ...(await independentGuide(asset)), id: crypto.randomUUID() };
 }
 
 export async function loadTracingGuide(draft: ArtworkDraft) {
@@ -65,8 +77,9 @@ export async function loadTracingGuide(draft: ArtworkDraft) {
   try {
     const asset = await db.get("assets", draft.tracing.assetId);
     validateGuideAsset(asset, draft.tracing.assetId);
-    await validateGuideImage(asset);
-    return asset;
+    const independent = await independentGuide(asset);
+    await validateGuideImage(independent);
+    return independent;
   } finally {
     db.close();
   }

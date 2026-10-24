@@ -118,6 +118,30 @@ async function records(page: Page) {
         assets: { id: string; kind: string; hash: string }[];
         settings: { key: string; value: string }[];
       }>((resolve, reject) => {
+        const readBytes = (asset: StoredAsset) =>
+          new Promise<ArrayBuffer>((resolveBytes, rejectBytes) => {
+            const timer = setTimeout(
+              () =>
+                rejectBytes(
+                  new Error(
+                    `Blob読出しが完了しません: ${asset.kind} ${asset.id}`,
+                  ),
+                ),
+              10000,
+            );
+            asset.blob.arrayBuffer().then(
+              (bytes) => {
+                clearTimeout(timer);
+                resolveBytes(bytes);
+              },
+              (error) => {
+                clearTimeout(timer);
+                rejectBytes(
+                  new Error(`Blob読出し失敗: ${asset.kind} ${String(error)}`),
+                );
+              },
+            );
+          });
         const r = indexedDB.open("suki-sketch");
         r.onsuccess = () => {
           const db = r.result,
@@ -133,27 +157,31 @@ async function records(page: Page) {
             settings = tx.objectStore("settings").getAll();
           tx.oncomplete = async () => {
             db.close();
-            resolve({
-              artworks: artworks.result,
-              characters: characters.result,
-              settings: settings.result,
-              assets: await Promise.all(
-                (assets.result as StoredAsset[]).map(async (a) => ({
-                  id: a.id,
-                  kind: a.kind,
-                  hash: Array.from(
-                    new Uint8Array(
-                      await crypto.subtle.digest(
-                        "SHA-256",
-                        await a.blob.arrayBuffer(),
+            try {
+              resolve({
+                artworks: artworks.result,
+                characters: characters.result,
+                settings: settings.result,
+                assets: await Promise.all(
+                  (assets.result as StoredAsset[]).map(async (a) => ({
+                    id: a.id,
+                    kind: a.kind,
+                    hash: Array.from(
+                      new Uint8Array(
+                        await crypto.subtle.digest(
+                          "SHA-256",
+                          await readBytes(a),
+                        ),
                       ),
-                    ),
-                  )
-                    .map((n) => n.toString(16).padStart(2, "0"))
-                    .join(""),
-                })),
-              ),
-            });
+                    )
+                      .map((n) => n.toString(16).padStart(2, "0"))
+                      .join(""),
+                  })),
+                ),
+              });
+            } catch (error) {
+              reject(error);
+            }
           };
           tx.onabort = () => reject(tx.error);
         };

@@ -7,7 +7,11 @@ import {
   type ArtworkDraft,
   type StoredAsset,
 } from "./database";
-import { validateGuideAsset, validateGuideImage } from "./tracing";
+import {
+  cloneGuideAsset,
+  validateGuideAsset,
+  validateGuideImage,
+} from "./tracing";
 import { isTracingSettings, type TracingUpdate } from "../drawing/tracing";
 import { isDrawingTools, type DrawingTools } from "../drawing/tools";
 import { inspectImageDimensions } from "./images";
@@ -225,6 +229,19 @@ export async function createDrawingCopy(
   await validateBundle(bundle, tools);
   const db = await openWorkshopDB();
   try {
+    // Blobの実体コピーは書込TXの外で終え、非同期読出しによるTX失効を避ける。
+    const initialSource = (await db.get("artworks", sourceId)) ?? fallback;
+    const settings = tracingOverride
+      ? tracingOverride.settings
+      : initialSource?.tracing;
+    let copiedGuide;
+    if (settings) {
+      if (!isTracingSettings(settings)) throw new StorageSchemaError();
+      const original =
+        tracingOverride?.asset ?? (await db.get("assets", settings.assetId));
+      validateGuideAsset(original, settings.assetId);
+      copiedGuide = await cloneGuideAsset(original);
+    }
     const tx = db.transaction(
       ["artworks", "assets", "settings", "characters"],
       "readwrite",
@@ -239,6 +256,11 @@ export async function createDrawingCopy(
       )
         throw new DrawingConflictError();
       const source = validateArtworkDraft(raw ?? fallback!);
+      if (
+        !tracingOverride &&
+        source.tracing?.assetId !== initialSource?.tracing?.assetId
+      )
+        throw new DrawingConflictError();
       if (
         expectedRevision !== undefined &&
         source.revision !== expectedRevision
@@ -259,18 +281,9 @@ export async function createDrawingCopy(
         updatedAt: now,
         revision: 1,
       };
-      const settings = tracingOverride
-        ? tracingOverride.settings
-        : source.tracing;
-      if (settings) {
-        if (!isTracingSettings(settings)) throw new StorageSchemaError();
-        const original =
-          tracingOverride?.asset ??
-          (await tx.objectStore("assets").get(settings.assetId));
-        validateGuideAsset(original, settings.assetId);
-        const guide = { ...original, id: crypto.randomUUID() };
-        await tx.objectStore("assets").add(guide);
-        draft.tracing = { ...settings, assetId: guide.id };
+      if (settings && copiedGuide) {
+        await tx.objectStore("assets").add(copiedGuide);
+        draft.tracing = { ...settings, assetId: copiedGuide.id };
       } else delete draft.tracing;
       if (
         draft.characterId &&
