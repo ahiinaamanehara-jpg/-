@@ -66,8 +66,15 @@ function controls(page: Page): Locator[] {
 
 async function usableSize(control: Locator) {
   const box = (await control.boundingBox())!;
-  expect(box.width).toBeGreaterThanOrEqual(44);
-  expect(box.height).toBeGreaterThanOrEqual(44);
+  // Firefoxのスクロール後の座標差では44pxが43.999969pxになる。
+  // 0.001px未満の浮動小数点誤差だけを許容し、計算後のCSS高さも別に確かめる。
+  expect(box.width + 0.001).toBeGreaterThanOrEqual(44);
+  expect(box.height + 0.001).toBeGreaterThanOrEqual(44);
+  expect(
+    await control.evaluate((el) =>
+      Number.parseFloat(getComputedStyle(el).height),
+    ),
+  ).toBeGreaterThanOrEqual(44);
 }
 
 for (const width of [320, 360]) {
