@@ -15,7 +15,7 @@ M7の自動検証と実機受け入れを分ける。ユーザーからM2〜M6�
 | iPhone・Safari | 個別の機種・版・結果は未記録 | 一連の操作・キーボード・書き出し・読み上げ |
 | Androidスマートフォン | 保存調整後の基本確認報告あり。今回の道具配置についても「スマホで使う分には押しやすいかな」との報告を受領。機種・OS・ブラウザー・機能別詳細は未記録 | 実際に使うブラウザーの版、キーボード・OS保存先・読み上げ等の個別結果 |
 | 利用者のPC環境（OS・安定版ブラウザー） | OS・版別の実操作は未記録 | Windows／Mac、実Safari・Edge、OSの画像保存・キーボード |
-| PlaywrightのChromium／Firefox／WebKit | [GitHubの最終Run #7](https://github.com/ahiinaamanehara-jpg/-/actions/runs/39924377813)で各9件、計27件成功 | 小画面の道具・保存と文字200%も検証。WebKitの通常フローは永続プロファイル。隔離領域のBlob保存不可とPNG退避も確認。実Safari・Edgeや実機の確認とは区別 |
+| PlaywrightのChromium／Firefox／WebKit | [GitHubの最終Run #9](https://github.com/ahiinaamanehara-jpg/-/actions/runs/40069006854)で各15件、計45件成功 | なぞり描きと保存・濃さ・PNG・ZIP・参考画像変更・競合コピーと削除も検証。WebKitの通常フローは永続プロファイル。実Safari・Edgeや実機の確認とは区別 |
 
 共通3エンジンの自動検証は完了した。M7の必須実機項目と実Safari・Edge等は確認待ちであり、M7全体の完了・一般公開向けの品質承認は保留する。未解決のデータ消失がないことを自動検証しつつ、端末固有の未確認事項を残す。
 
