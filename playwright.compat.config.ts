@@ -1,16 +1,19 @@
 import { defineConfig, devices } from "@playwright/test";
 import base from "./playwright.config";
 
+const commonTests = [
+  "**/acceptance.spec.ts",
+  "**/accessibility.spec.ts",
+  "**/compatibility-storage.spec.ts",
+  "**/drawing-layout.spec.ts",
+  "**/tracing.spec.ts",
+  "**/view.spec.ts",
+];
+
 // 利用可能なブラウザーを明示的に実行する。未導入を成功やスキップにしない。
 export default defineConfig({
   ...base,
-  testMatch: [
-    "**/acceptance.spec.ts",
-    "**/accessibility.spec.ts",
-    "**/compatibility-storage.spec.ts",
-    "**/drawing-layout.spec.ts",
-    "**/tracing.spec.ts",
-  ],
+  testMatch: commonTests,
   outputDir: "./test-results/compat",
   forbidOnly: Boolean(process.env.CI),
   retries: 0,
@@ -22,6 +25,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testMatch: [...commonTests, "**/view-touch.spec.ts"],
       use: {
         ...devices["Desktop Chrome"],
         launchOptions: {

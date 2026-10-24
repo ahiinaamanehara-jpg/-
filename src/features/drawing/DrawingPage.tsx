@@ -5,7 +5,6 @@ import {
   useState,
   type ChangeEvent,
   type Dispatch,
-  type PointerEvent as ReactPointerEvent,
   type SetStateAction,
 } from "react";
 import { loadDraft, markDraftOpened } from "../../data/drafts";
@@ -24,9 +23,10 @@ import {
 } from "../../drawing/tracing";
 import { BlobImage } from "../../components/BlobImage";
 import { TracingControls } from "./TracingControls";
+import { CanvasViewport } from "./CanvasViewport";
 import {
   DrawingSurface,
-  canvasPoint,
+  type Point,
   captureDrawing,
   consumeImport,
   rememberImport,
@@ -171,6 +171,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
   });
   const [undoCount, setUndoCount] = useState(0);
   const [drawing, setDrawing] = useState(false);
+  const [viewing, setViewing] = useState(false);
   const [importing, setImporting] = useState(false);
   const importingRef = useRef(false);
   const [actionError, setActionError] = useState("");
@@ -240,18 +241,20 @@ function DrawingEditor({ data }: { data: DrawingData }) {
   const finishStroke = () => {
     const controller = session.current;
     if (pointer.current === undefined || !controller) return;
-    const id = pointer.current;
     pointer.current = undefined;
     controller.surface.end();
     controller.ended();
     setDrawing(false);
     setUndoCount(controller.surface.history.length);
-    try {
-      if (canvas.current?.hasPointerCapture(id))
-        canvas.current.releasePointerCapture(id);
-    } catch {
-      /* pointer already released */
-    }
+  };
+  const cancelStroke = (id: number) => {
+    const controller = session.current;
+    if (!controller || pointer.current !== id) return;
+    pointer.current = undefined;
+    controller.surface.cancel();
+    controller.cancelled();
+    setDrawing(false);
+    setUndoCount(controller.surface.history.length);
   };
   useEffect(() => {
     const unregister = registerNavigationGuard((target) => {
@@ -316,47 +319,25 @@ function DrawingEditor({ data }: { data: DrawingData }) {
       window.removeEventListener("beforeunload", beforeUnload);
     };
   }, []);
-  const begin = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+  const begin = (point: Point, id: number) => {
     if (
       !ready ||
       fatal ||
       importingRef.current ||
       openingReflectionRef.current ||
       leavingRef.current ||
-      pointer.current !== undefined ||
-      !event.isPrimary ||
-      event.button !== 0
+      pointer.current !== undefined
     )
       return;
-    event.preventDefault();
-    pointer.current = event.pointerId;
-    canvas.current!.setPointerCapture(event.pointerId);
+    pointer.current = id;
     const controller = session.current!;
-    controller.surface.begin(
-      canvasPoint(
-        event.clientX,
-        event.clientY,
-        canvas.current!.getBoundingClientRect(),
-      ),
-      controller.tools,
-    );
+    controller.surface.begin(point, controller.tools);
     controller.started();
     setDrawing(true);
   };
-  const move = (event: ReactPointerEvent<HTMLCanvasElement>) => {
-    if (pointer.current !== event.pointerId) return;
-    event.preventDefault();
-    const controller = session.current!;
-    const coalesced = event.nativeEvent.getCoalescedEvents?.();
-    const samples = coalesced?.length ? coalesced : [event.nativeEvent];
-    for (const sample of samples)
-      controller.surface.move(
-        canvasPoint(
-          sample.clientX,
-          sample.clientY,
-          canvas.current!.getBoundingClientRect(),
-        ),
-      );
+  const move = (point: Point, id: number) => {
+    if (pointer.current !== id) return;
+    session.current?.surface.move(point);
   };
   const changeTools = (next: DrawingTools) => {
     setTools(next);
@@ -528,13 +509,9 @@ function DrawingEditor({ data }: { data: DrawingData }) {
         );
     }
   };
-  const disabled =
-    !ready ||
-    Boolean(fatal) ||
-    importing ||
-    leaving ||
-    drawing ||
-    openingReflection;
+  const viewBlocked =
+    !ready || Boolean(fatal) || importing || leaving || openingReflection;
+  const disabled = viewBlocked || drawing || viewing;
   const statusText = {
     saved: "保存済み",
     pending: "未保存の変更があります",
@@ -613,8 +590,16 @@ function DrawingEditor({ data }: { data: DrawingData }) {
             changeTracing();
         }}
       />
-      <div
-        className={`canvas-frame${guide && tracing?.visible ? " tracing-visible" : ""}`}
+      <CanvasViewport
+        blocked={viewBlocked}
+        tracingVisible={Boolean(guide && tracing?.visible)}
+        onBegin={begin}
+        onMove={move}
+        onEnd={(id) => {
+          if (pointer.current === id) finishStroke();
+        }}
+        onCancel={cancelStroke}
+        onManipulating={setViewing}
       >
         {guide && tracing?.visible && (
           <BlobImage
@@ -630,22 +615,11 @@ function DrawingEditor({ data }: { data: DrawingData }) {
           width={960}
           height={960}
           aria-label="お絵描きキャンバス"
-          aria-describedby="canvas-help"
-          onPointerDown={begin}
-          onPointerMove={move}
-          onPointerUp={(event) => {
-            if (pointer.current === event.pointerId) finishStroke();
-          }}
-          onPointerCancel={(event) => {
-            if (pointer.current === event.pointerId) finishStroke();
-          }}
-          onLostPointerCapture={(event) => {
-            if (pointer.current === event.pointerId) finishStroke();
-          }}
+          aria-describedby="canvas-help canvas-view-help"
         >
           描画にはCanvasに対応したブラウザーが必要です。
         </canvas>
-      </div>
+      </CanvasViewport>
       <fieldset className="drawing-tools" disabled={disabled}>
         <legend className="sr-only">描画の道具</legend>
         <div role="group" aria-label="道具" className="drawing-tool-buttons">

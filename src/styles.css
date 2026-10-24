@@ -603,13 +603,63 @@ textarea {
 }
 .canvas-frame {
   position: relative;
-  background: #fff;
+  background: #e9e3d9;
+  touch-action: none;
+  user-select: none;
   border: 1px solid #a1917b;
   border-radius: 10px;
-  overflow: hidden;
+  overflow: clip;
   max-width: 720px;
   margin: 16px auto;
   line-height: 0;
+}
+.canvas-transform {
+  position: relative;
+  transform-origin: 50% 50%;
+  background: #fff;
+}
+.canvas-frame.canvas-pan-mode canvas {
+  cursor: grab;
+}
+.canvas-view-controls {
+  margin: 16px 0;
+}
+.canvas-view-controls summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 8px 0;
+  color: #75472e;
+}
+.canvas-view-controls fieldset {
+  min-width: 0;
+}
+.canvas-view-values {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.canvas-view-values p {
+  margin: 8px 0;
+}
+.canvas-view-values span {
+  display: block;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.canvas-view-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  gap: 8px;
+}
+.canvas-view-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+.canvas-view-modes button[aria-pressed="true"] {
+  background: #805236;
+  color: #fff;
 }
 .canvas-frame canvas {
   position: relative;

@@ -119,6 +119,7 @@ export class DrawingSurface {
   readonly context: CanvasRenderingContext2D;
   readonly history = new UndoHistory();
   private previous?: Point;
+  private strokeSnapshot?: ImageData;
   constructor(readonly canvas: HTMLCanvasElement) {
     const context = canvas.getContext("2d", { willReadFrequently: true });
     if (!context)
@@ -126,7 +127,7 @@ export class DrawingSurface {
     this.context = context;
   }
   begin(point: Point, tools: DrawingTools) {
-    this.history.push(this.context.getImageData(0, 0, 960, 960));
+    this.strokeSnapshot = this.context.getImageData(0, 0, 960, 960);
     this.context.globalCompositeOperation =
       tools.tool === "eraser" ? "destination-out" : "source-over";
     this.context.fillStyle = tools.color;
@@ -148,6 +149,15 @@ export class DrawingSurface {
     this.previous = point;
   }
   end() {
+    if (this.strokeSnapshot) this.history.push(this.strokeSnapshot);
+    this.strokeSnapshot = undefined;
+    this.previous = undefined;
+    this.context.globalCompositeOperation = "source-over";
+  }
+  cancel() {
+    if (!this.strokeSnapshot) return;
+    this.context.putImageData(this.strokeSnapshot, 0, 0);
+    this.strokeSnapshot = undefined;
     this.previous = undefined;
     this.context.globalCompositeOperation = "source-over";
   }
@@ -172,6 +182,7 @@ export class DrawingSurface {
     this.history.push(this.context.createImageData(960, 960));
   }
   dispose() {
+    this.strokeSnapshot = undefined;
     this.history.clear();
   }
 }

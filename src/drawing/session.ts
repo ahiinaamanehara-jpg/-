@@ -73,6 +73,18 @@ export class DrawingSession {
     this.strokeActive = false;
     this.changed();
   }
+  cancelled() {
+    this.strokeActive = false;
+    this.state = !this.draft
+      ? "scratch"
+      : this.running
+        ? "saving"
+        : this.dirty
+          ? "pending"
+          : "saved";
+    this.emit();
+    if (this.dirty) this.schedule();
+  }
   private schedule() {
     if (!this.draft || this.disposed) return;
     if (this.debounce) clearTimeout(this.debounce);

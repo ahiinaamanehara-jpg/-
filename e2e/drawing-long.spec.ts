@@ -1,10 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { DRAWING_SAVE_TIMEOUT_MS } from "./support/storageDiagnostics";
+import { paperPosition, viewState } from "./support/canvasView";
 
 const withGuide = process.env.PLAYWRIGHT_TRACING_STRESS === "1";
+const withView = process.env.PLAYWRIGHT_VIEW_STRESS === "1";
 
-test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ? "（1600pxの下絵あり）" : ""}`, async ({
+test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ? "（1600pxの下絵あり）" : ""}${withView ? "（表示156%・30度）" : ""}`, async ({
   page,
 }, info) => {
   test.setTimeout(380_000);
@@ -42,10 +44,24 @@ test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ?
     .click();
   const pen = page.getByRole("button", { name: "ペン", exact: true });
   await expect(pen).toBeEnabled();
+  if (withView) {
+    await page.locator(".canvas-view-controls summary").click();
+    for (let i = 0; i < 2; i++)
+      await page
+        .getByRole("button", { name: "表示を拡大", exact: true })
+        .click();
+    for (let i = 0; i < 2; i++)
+      await page.getByRole("button", { name: "右に回す", exact: true }).click();
+    await page.locator(".canvas-view-controls summary").click();
+  }
   const canvas = page.getByLabel("お絵描きキャンバス");
-  await canvas.scrollIntoViewIfNeeded();
+  const viewport = page.getByRole("group", {
+    name: "キャンバスの表示範囲",
+    exact: true,
+  });
+  await viewport.scrollIntoViewIfNeeded();
   const box = (await canvas.boundingBox())!;
-  await canvas.evaluate((node) => {
+  await viewport.evaluate((node) => {
     const samples: number[] = [];
     (window as unknown as { drawingFrames: number[] }).drawingFrames = samples;
     node.addEventListener(
@@ -85,9 +101,15 @@ test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ?
     revision = 1;
   while (Date.now() - started < 300_000) {
     const y = box.y + box.height * (0.1 + (strokes % 35) * 0.022);
-    await page.mouse.move(box.x + box.width * 0.12, y);
+    const from = withView
+      ? await paperPosition(page, 0.35, 0.3 + (strokes % 20) * 0.02)
+      : { x: box.x + box.width * 0.12, y };
+    const to = withView
+      ? await paperPosition(page, 0.65, 0.3 + (strokes % 20) * 0.02)
+      : { x: box.x + box.width * 0.88, y };
+    await page.mouse.move(from.x, from.y);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width * 0.88, y, { steps: 5 });
+    await page.mouse.move(to.x, to.y, { steps: 5 });
     await page.mouse.up();
     strokes++;
     if (Date.now() - checkpoint > 20_000) {
@@ -111,6 +133,7 @@ test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ?
   );
   frames.sort((a, b) => a - b);
   const stats = {
+    withView,
     withGuide,
     elapsedMs,
     strokes,
@@ -141,6 +164,13 @@ test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ?
     (node as HTMLCanvasElement).toDataURL(),
   );
   await page.reload();
+  if (withView)
+    expect(await viewState(page)).toEqual({
+      scale: 1,
+      rotation: 0,
+      x: 0,
+      y: 0,
+    });
   await expect(pen).toBeEnabled();
   if (withGuide) await expect(page.locator(".tracing-underlay")).toBeVisible();
   expect(

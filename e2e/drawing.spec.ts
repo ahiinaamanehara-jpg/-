@@ -688,7 +688,7 @@ test.describe("タッチ入力", () => {
     isMobile: true,
     viewport: { width: 375, height: 812 },
   });
-  test("1本指を描画し2本目を無視、取消イベントで線を終了する", async ({
+  test("1本指の描画は取消イベントでも線を保持して終了する", async ({
     page,
     context,
   }, testInfo) => {
@@ -710,12 +710,8 @@ test.describe("タッチ入力", () => {
       box,
     );
     await cdp.send("Input.dispatchTouchEvent", {
-      type: "touchStart",
-      touchPoints: [p(1, 0.2, 0.4), p(2, 0.2, 0.8)],
-    });
-    await cdp.send("Input.dispatchTouchEvent", {
       type: "touchMove",
-      touchPoints: [p(1, 0.8, 0.4), p(2, 0.8, 0.8)],
+      touchPoints: [p(1, 0.8, 0.4)],
     });
     await expect.poll(async () => (await pixel(page, 0.5, 0.4))[3]).toBe(255);
     await cdp.send("Input.dispatchTouchEvent", {
