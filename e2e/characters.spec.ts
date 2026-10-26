@@ -355,7 +355,7 @@ test("容量不足の更新失敗で旧データ・画像と編集内容を保�
   ]);
 });
 
-test("v1の設定を保ったままv4へ移行する", async ({ page }) => {
+test("v1の設定を保ったままv5へ移行する", async ({ page }) => {
   await page.goto("#/settings/data");
   await expect(page.getByRole("status")).toContainText("利用できます");
   await page.evaluate(async () => {
@@ -401,7 +401,7 @@ test("v1の設定を保ったままv4へ移行する", async ({ page }) => {
       }),
   );
   expect(migrated).toEqual({
-    version: 4,
+    version: 5,
     stores: ["artworks", "assets", "characters", "reflections", "settings"],
     setting: "残す設定",
   });

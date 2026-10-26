@@ -25,10 +25,12 @@ import { BlobImage } from "../../components/BlobImage";
 import { TracingControls } from "./TracingControls";
 import { CanvasViewport } from "./CanvasViewport";
 import { DrawingWorkspace } from "./DrawingWorkspace";
+import { LayerControls } from "./LayerControls";
+import { loadDrawingLayers } from "../../data/layers";
+import type { LayerView, LayerStack, BitmapLayer } from "../../drawing/layers";
 import {
   DrawingSurface,
   type Point,
-  captureDrawing,
   consumeImport,
   rememberImport,
   importToBundle,
@@ -50,6 +52,7 @@ import {
 interface DrawingData {
   draft?: ArtworkDraft;
   bitmap?: Blob;
+  layers?: LayerStack<BitmapLayer>;
   character?: Character;
   reference?: ReferenceAsset;
   guide?: GuideAsset;
@@ -74,6 +77,7 @@ export function DrawingPage({
       .then(async (draft) => {
         if (!draft) return null;
         const bitmap = await loadDrawingBitmap(draft);
+        const layers = await loadDrawingLayers(draft);
         let guide: GuideAsset | undefined,
           guideWarning = "";
         try {
@@ -106,6 +110,7 @@ export function DrawingPage({
         return {
           draft,
           bitmap,
+          layers,
           character,
           reference,
           warning,
@@ -171,6 +176,11 @@ function DrawingEditor({ data }: { data: DrawingData }) {
     dirty: false,
   });
   const [undoCount, setUndoCount] = useState(0);
+  const [layers, setLayers] = useState<LayerView>({
+    enabled: false,
+    activeId: "",
+    items: [],
+  });
   const [drawing, setDrawing] = useState(false);
   const [viewing, setViewing] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -211,10 +221,11 @@ function DrawingEditor({ data }: { data: DrawingData }) {
           data.guide,
         );
         session.current = controller;
-        if (data.bitmap) await surface.load(data.bitmap);
+        if (data.bitmap) await surface.load(data.bitmap, data.layers);
         if (!active) return;
         if (data.draft && consumeImport(data.draft.id))
           surface.seedImportUndo();
+        setLayers(surface.layerView);
         setUndoCount(surface.history.length);
         setReady(true);
       })
@@ -330,9 +341,9 @@ function DrawingEditor({ data }: { data: DrawingData }) {
       pointer.current !== undefined
     )
       return;
-    pointer.current = id;
     const controller = session.current!;
-    controller.surface.begin(point, controller.tools);
+    if (!controller.surface.begin(point, controller.tools)) return;
+    pointer.current = id;
     controller.started();
     setDrawing(true);
   };
@@ -346,9 +357,35 @@ function DrawingEditor({ data }: { data: DrawingData }) {
   };
   const undo = () => {
     const controller = session.current;
-    if (controller?.surface.undo()) {
-      controller.changed();
-      setUndoCount(controller.surface.history.length);
+    try {
+      if (controller?.surface.undo()) {
+        controller.changed();
+        setUndoCount(controller.surface.history.length);
+        setLayers(controller.surface.layerView);
+      }
+    } catch (error) {
+      setActionError(drawingError(error));
+    }
+  };
+  const changeLayers = (operation: (surface: DrawingSurface) => boolean) => {
+    const controller = session.current;
+    if (
+      !controller ||
+      drawing ||
+      viewing ||
+      importingRef.current ||
+      leavingRef.current
+    )
+      return;
+    try {
+      if (operation(controller.surface)) {
+        setLayers(controller.surface.layerView);
+        setUndoCount(controller.surface.history.length);
+        controller.changed();
+        setActionError("");
+      }
+    } catch (error) {
+      setActionError(drawingError(error));
     }
   };
   const save = async () => {
@@ -422,7 +459,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
     setImporting(true);
     setActionError("");
     try {
-      const bundle = await captureDrawing(controller.surface.canvas);
+      const bundle = await controller.surface.capture();
       const next = await createDrawingCopy(
         controller.draft.id,
         bundle,
@@ -640,52 +677,106 @@ function DrawingEditor({ data }: { data: DrawingData }) {
           </CanvasViewport>
         )}
         tools={
-          <div role="group" aria-label="道具" className="drawing-tool-buttons">
-            <button
-              type="button"
-              aria-pressed={tools.tool === "pen"}
-              onClick={() => changeTools({ ...tools, tool: "pen" })}
+          <>
+            {layers.enabled && (
+              <div className="layer-current">
+                <span>
+                  描く：
+                  {
+                    layers.items.find((item) => item.id === layers.activeId)
+                      ?.name
+                  }
+                </span>
+                {layers.items.find((item) => item.id === layers.activeId)
+                  ?.visible === false && (
+                  <>
+                    <span>（非表示のため描けません）</span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        changeLayers((surface) =>
+                          surface.setLayerVisible(layers.activeId, true),
+                        )
+                      }
+                    >
+                      表示して描く
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+            <div
+              role="group"
+              aria-label="道具"
+              className="drawing-tool-buttons"
             >
-              ペン
-            </button>
-            <button
-              type="button"
-              aria-pressed={tools.tool === "eraser"}
-              onClick={() => changeTools({ ...tools, tool: "eraser" })}
-            >
-              消しゴム
-            </button>
-            <button type="button" disabled={undoCount === 0} onClick={undo}>
-              取り消し
-            </button>
-          </div>
+              <button
+                type="button"
+                aria-pressed={tools.tool === "pen"}
+                onClick={() => changeTools({ ...tools, tool: "pen" })}
+              >
+                ペン
+              </button>
+              <button
+                type="button"
+                aria-pressed={tools.tool === "eraser"}
+                onClick={() => changeTools({ ...tools, tool: "eraser" })}
+              >
+                消しゴム
+              </button>
+              <button type="button" disabled={undoCount === 0} onClick={undo}>
+                取り消し
+              </button>
+            </div>
+          </>
         }
         options={
-          <div className="drawing-options">
-            <label>
-              ペンの色
-              <input
-                type="color"
-                value={tools.color}
-                onChange={(event) =>
-                  changeTools({ ...tools, color: event.target.value })
-                }
-              />
-            </label>
-            <label>
-              線の太さ：{tools.width}px
-              <input
-                aria-label="線の太さ"
-                type="range"
-                min={1}
-                max={40}
-                value={tools.width}
-                onChange={(event) =>
-                  changeTools({ ...tools, width: Number(event.target.value) })
-                }
-              />
-            </label>
-          </div>
+          <>
+            <div className="drawing-options">
+              <label>
+                ペンの色
+                <input
+                  type="color"
+                  value={tools.color}
+                  onChange={(event) =>
+                    changeTools({ ...tools, color: event.target.value })
+                  }
+                />
+              </label>
+              <label>
+                線の太さ：{tools.width}px
+                <input
+                  aria-label="線の太さ"
+                  type="range"
+                  min={1}
+                  max={40}
+                  value={tools.width}
+                  onChange={(event) =>
+                    changeTools({ ...tools, width: Number(event.target.value) })
+                  }
+                />
+              </label>
+            </div>
+          </>
+        }
+        extraOptions={
+          <LayerControls
+            layers={layers}
+            disabled={disabled}
+            onAdd={() => changeLayers((surface) => surface.addLayer())}
+            onSelect={(id) =>
+              changeLayers((surface) => surface.selectLayer(id))
+            }
+            onVisible={(id, visible) =>
+              changeLayers((surface) => surface.setLayerVisible(id, visible))
+            }
+            onMove={(id, direction) =>
+              changeLayers((surface) => surface.moveLayer(id, direction))
+            }
+            onRemove={(id) =>
+              changeLayers((surface) => surface.removeLayer(id))
+            }
+          />
         }
         feedback={
           <>
@@ -833,7 +924,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
         )}
       </details>
       <p className="note">
-        取り消しはこの画面での直前の操作に対応します（960pxでは最大9操作）。再開時に履歴は戻りません。白紙や途中の絵も保存できます。
+        取り消しはこの画面での直前の操作に対応します（描画は最大9操作、レイヤー操作と共通）。再開時に履歴は戻りません。白紙や途中の絵も保存できます。
       </p>
       <a className="button" href="#/new">
         別のテーマで準備する

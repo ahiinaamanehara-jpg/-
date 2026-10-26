@@ -34,7 +34,7 @@ interface AssetRecord {
 }
 interface Manifest {
   format: "suki-sketch";
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   createdAt: string;
   characters: Character[];
   artworks: ArtworkDraft[];
@@ -69,6 +69,7 @@ const artworkKeys = [
   "thumbnailAssetId",
   "tools",
   "tracing",
+  "layers",
   "width",
   "height",
   "createdAt",
@@ -125,6 +126,7 @@ function validateGraph(
     link(a.canvasAssetId, "canvas");
     link(a.thumbnailAssetId, "thumbnail");
     link(a.tracing?.assetId, "guide");
+    for (const layer of a.layers?.items ?? []) link(layer.assetId, "layer");
   }
   for (const r of reflections.values()) {
     if (
@@ -140,7 +142,9 @@ function validateGraph(
   }
   for (const a of assets.values()) {
     if (
-      !["canvas", "thumbnail", "reference", "guide"].includes(a.kind) ||
+      !["canvas", "thumbnail", "reference", "guide", "layer"].includes(
+        a.kind,
+      ) ||
       a.mime !== "image/png" ||
       !Number.isSafeInteger(a.size) ||
       a.size < 1 ||
@@ -152,7 +156,11 @@ function validateGraph(
     )
       throw backupError();
     const side =
-      a.kind === "canvas" ? 960 : a.kind === "thumbnail" ? 192 : undefined;
+      a.kind === "canvas" || a.kind === "layer"
+        ? 960
+        : a.kind === "thumbnail"
+          ? 192
+          : undefined;
     if (
       side
         ? a.width !== side || a.height !== side
@@ -207,7 +215,7 @@ export function validateManifest(raw: unknown): Manifest {
   const m = raw as Manifest;
   if (
     m.format !== "suki-sketch" ||
-    ![1, 2].includes(m.version) ||
+    ![1, 2, 3].includes(m.version) ||
     typeof m.createdAt !== "string" ||
     !Number.isFinite(Date.parse(m.createdAt)) ||
     ![m.characters, m.artworks, m.reflections, m.assets, m.settings].every(
@@ -222,6 +230,12 @@ export function validateManifest(raw: unknown): Manifest {
         m.assets.some((a) => a?.kind === "guide"))
     )
       throw backupError();
+    if (
+      m.version < 3 &&
+      (m.artworks.some((a) => a?.layers !== undefined) ||
+        m.assets.some((a) => a?.kind === "layer"))
+    )
+      throw backupError();
     const data: Manifest = {
       format: "suki-sketch",
       version: m.version,
@@ -231,6 +245,13 @@ export function validateManifest(raw: unknown): Manifest {
         const row = pick(r, artworkKeys);
         if (row.tracing)
           row.tracing = pick(row.tracing, ["assetId", "opacity", "visible"]);
+        if (row.layers)
+          row.layers = {
+            activeId: row.layers.activeId,
+            items: row.layers.items.map((layer) =>
+              pick(layer, ["id", "name", "visible", "assetId"]),
+            ),
+          };
         return row;
       }),
       reflections: m.reflections.map((r) => pick(r, reflectionKeys)),
@@ -276,7 +297,7 @@ export async function exportBackup() {
   const manifest = validateManifest({
     ...source,
     format: "suki-sketch",
-    version: 2,
+    version: 3,
     createdAt: new Date().toISOString(),
     assets: source.assets.map((a, i) => ({ ...a, file: `assets/${i}.png` })),
   });
@@ -402,6 +423,17 @@ export async function restoreBackup(plan: RestorePlan) {
       ? {
           canvasAssetId: mapId("s", a.canvasAssetId),
           thumbnailAssetId: mapId("s", a.thumbnailAssetId!),
+        }
+      : {}),
+    ...(a.layers
+      ? {
+          layers: {
+            activeId: a.layers.activeId,
+            items: a.layers.items.map((layer) => ({
+              ...layer,
+              assetId: mapId("s", layer.assetId),
+            })),
+          },
         }
       : {}),
     ...(a.tracing

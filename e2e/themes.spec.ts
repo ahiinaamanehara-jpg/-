@@ -317,7 +317,7 @@ test("推しを削除しても途中データのテーマを残し未分類へ�
   expect(saved.revision).toBeGreaterThan(first.revision);
 });
 
-test("v2の推し・画像・設定を削除せずv4へ移行する", async ({ page }) => {
+test("v2の推し・画像・設定を削除せずv5へ移行する", async ({ page }) => {
   await page.goto("#/settings/data");
   await expect(page.getByRole("status")).toContainText(
     "端末内保存を利用できます",
@@ -388,7 +388,7 @@ test("v2の推し・画像・設定を削除せずv4へ移行する", async ({ p
     .click();
   await expect(page).toHaveURL(/#\/draw\/(?!new$)[^/]+$/);
   const saved = await stored(page);
-  expect(saved.version).toBe(4);
+  expect(saved.version).toBe(5);
   expect(saved.settings).toContainEqual({
     key: "sentinel",
     value: "移行で消さない",

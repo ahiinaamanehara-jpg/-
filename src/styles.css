@@ -1164,3 +1164,58 @@ dialog.drawing-workspace.is-focused {
 .workspace-options-heading h2 {
   margin: 0;
 }
+
+.layer-controls {
+  margin: 16px 0;
+}
+.layer-controls summary {
+  min-height: 44px;
+  padding: 8px 0;
+  cursor: pointer;
+  color: #75472e;
+}
+.layer-controls fieldset {
+  min-width: 0;
+}
+.layer-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.layer-list li {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #b5a28b;
+  border-radius: 12px;
+  background: #fffdf8;
+}
+.layer-list li.selected {
+  border: 2px solid #805236;
+}
+.layer-select {
+  width: 100%;
+  overflow-wrap: anywhere;
+}
+.layer-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.layer-actions button {
+  min-width: 0;
+  padding: 8px 4px;
+  overflow-wrap: anywhere;
+}
+.layer-current {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}

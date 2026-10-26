@@ -162,6 +162,9 @@ export async function deleteArtwork(id: string, expectedRevision: number) {
         [work.canvasAssetId, "canvas"],
         [work.thumbnailAssetId, "thumbnail"],
         [work.tracing?.assetId, "guide"],
+        ...(work.layers?.items.map(
+          (layer) => [layer.assetId, "layer"] as const,
+        ) ?? []),
       ] as const) {
         if (
           !assetId ||

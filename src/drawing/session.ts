@@ -1,7 +1,7 @@
 import { saveDrawing } from "../data/drawings";
 import type { ArtworkDraft, GuideAsset } from "../data/database";
 import type { TracingUpdate } from "./tracing";
-import { captureDrawing, DrawingSurface } from "./surface";
+import { DrawingSurface } from "./surface";
 import type { DrawingTools } from "./tools";
 
 export interface SaveState {
@@ -122,7 +122,7 @@ export class DrawingSession {
         this.state = "saving";
         this.emit();
         try {
-          const bundle = await captureDrawing(this.surface.canvas);
+          const bundle = await this.surface.capture();
           if (this.disposed) return false;
           this.draft = await saveDrawing(
             this.draft!.id,

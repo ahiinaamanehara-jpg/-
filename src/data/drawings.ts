@@ -15,10 +15,17 @@ import {
 import { isTracingSettings, type TracingUpdate } from "../drawing/tracing";
 import { isDrawingTools, type DrawingTools } from "../drawing/tools";
 import { inspectImageDimensions } from "./images";
+import {
+  makeLayerAssets,
+  validateLayerAsset,
+  validateLayerBitmaps,
+} from "./layers";
+import type { LayerStack, BitmapLayer } from "../drawing/layers";
 
 export interface DrawingBundle {
   bitmap: Blob;
   thumbnail: Blob;
+  layers?: LayerStack<BitmapLayer> | null;
 }
 export class DrawingConflictError extends Error {
   constructor() {
@@ -30,6 +37,8 @@ export class DrawingConflictError extends Error {
 }
 async function validateBundle(bundle: DrawingBundle, tools: DrawingTools) {
   if (!isDrawingTools(tools)) throw new StorageSchemaError();
+  if (bundle.layers !== undefined && bundle.layers !== null)
+    await validateLayerBitmaps(bundle.layers);
   for (const [kind, blob, side] of [
     ["canvas", bundle.bitmap, 960],
     ["thumbnail", bundle.thumbnail, 192],
@@ -153,6 +162,16 @@ export async function saveDrawing(
           "thumbnail",
         );
       }
+      if (previous.layers && bundle.layers === undefined)
+        throw new StorageSchemaError();
+      for (const layer of previous.layers?.items ?? [])
+        validateLayerAsset(
+          await tx.objectStore("assets").get(layer.assetId),
+          layer.assetId,
+        );
+      const layerAssets = makeLayerAssets(bundle.layers);
+      for (const asset of layerAssets.assets)
+        await tx.objectStore("assets").add(asset);
       const [bitmap, thumbnail] = makeAssets(bundle);
       await tx.objectStore("assets").add(bitmap);
       await tx.objectStore("assets").add(thumbnail);
@@ -164,6 +183,8 @@ export async function saveDrawing(
         updatedAt: new Date().toISOString(),
         revision: previous.revision + 1,
       };
+      if (layerAssets.state) next.layers = layerAssets.state;
+      else delete next.layers;
       if (tracing) {
         if (tracing.settings) {
           const id = tracing.settings.assetId;
@@ -193,6 +214,18 @@ export async function saveDrawing(
           const old = await tx.objectStore("assets").get(previousGuideId);
           if (old?.kind === "guide")
             await tx.objectStore("assets").delete(previousGuideId);
+        }
+      }
+      if (previous.layers) {
+        const artworks = await tx.objectStore("artworks").getAll();
+        const characters = await tx.objectStore("characters").getAll();
+        for (const layer of previous.layers.items) {
+          if (
+            ![...artworks, ...characters].some((record) =>
+              referencesAsset(record, layer.assetId),
+            )
+          )
+            await tx.objectStore("assets").delete(layer.assetId);
         }
       }
       if (previous.canvasAssetId)
@@ -266,6 +299,9 @@ export async function createDrawingCopy(
         source.revision !== expectedRevision
       )
         throw new DrawingConflictError();
+      const layerAssets = makeLayerAssets(bundle.layers);
+      for (const asset of layerAssets.assets)
+        await tx.objectStore("assets").add(asset);
       const [bitmap, thumbnail] = makeAssets(bundle);
       await tx.objectStore("assets").add(bitmap);
       await tx.objectStore("assets").add(thumbnail);
@@ -281,6 +317,8 @@ export async function createDrawingCopy(
         updatedAt: now,
         revision: 1,
       };
+      if (layerAssets.state) draft.layers = layerAssets.state;
+      else delete draft.layers;
       if (settings && copiedGuide) {
         await tx.objectStore("assets").add(copiedGuide);
         draft.tracing = { ...settings, assetId: copiedGuide.id };

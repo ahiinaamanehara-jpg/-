@@ -9,6 +9,7 @@ export function DrawingWorkspace({
   canvas,
   tools,
   options,
+  extraOptions,
   actions,
   feedback,
 }: {
@@ -19,6 +20,7 @@ export function DrawingWorkspace({
   canvas: (controlsTarget: HTMLElement | null) => ReactNode;
   tools: ReactNode;
   options: ReactNode;
+  extraOptions?: ReactNode;
   actions: (focused: boolean) => ReactNode;
   feedback: ReactNode;
 }) {
@@ -222,7 +224,12 @@ export function DrawingWorkspace({
         <div className="workspace-feedback" data-workspace-scroll>
           {feedback}
         </div>
-        {!focused && actions(false)}
+        {!focused && (
+          <>
+            {actions(false)}
+            {extraOptions}
+          </>
+        )}
         <section
           id={`${id}-options`}
           className="workspace-options"
@@ -243,6 +250,7 @@ export function DrawingWorkspace({
               {options}
             </fieldset>
           )}
+          {focused && extraOptions}
           {focused && actions(true)}
         </section>
       </dialog>

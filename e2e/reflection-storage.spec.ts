@@ -134,7 +134,7 @@ async function raw(page: Page) {
   );
 }
 
-test("v3の絵・道具・推し・参考画像・設定を保持してv4へ移行する", async ({
+test("v3の絵・道具・推し・参考画像・設定を保持してv5へ移行する", async ({
   page,
 }) => {
   await seedV3(page);
@@ -142,7 +142,7 @@ test("v3の絵・道具・推し・参考画像・設定を保持してv4へ移�
   await page.reload();
   await expect(page.getByRole("status")).toContainText("利用できます");
   const after = await raw(page);
-  expect(after.version).toBe(4);
+  expect(after.version).toBe(5);
   expect(after.stores).toContain("reflections");
   expect(after.artworks).toEqual(before.artworks);
   expect(after.settings).toEqual(before.settings);
@@ -221,7 +221,7 @@ test("別タブがv3を使っている間は待ちを説明し、閉じた後に
   expect(await raw(page)).toEqual(before);
   await page.reload();
   await expect(page.getByRole("status")).toContainText("利用できます");
-  expect((await raw(page)).version).toBe(4);
+  expect((await raw(page)).version).toBe(5);
 });
 
 test("v4の回答インデックスが不正でもデータを自動初期化しない", async ({

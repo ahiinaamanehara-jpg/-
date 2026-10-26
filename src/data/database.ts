@@ -3,6 +3,11 @@ import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Reflection } from "./reflectionTypes";
 import type { QuestionId } from "./reflectionQuestions";
 import { isTracingSettings, type TracingSettings } from "../drawing/tracing";
+import {
+  isStoredLayerStack,
+  type LayerStack,
+  type StoredLayer,
+} from "../drawing/layers";
 
 export interface Character {
   id: string;
@@ -36,7 +41,11 @@ export interface ArtworkAsset {
 export interface GuideAsset extends Omit<ReferenceAsset, "kind"> {
   kind: "guide";
 }
-export type StoredAsset = ReferenceAsset | ArtworkAsset | GuideAsset;
+export interface LayerAsset extends Omit<ArtworkAsset, "kind"> {
+  kind: "layer";
+}
+export type StoredAsset =
+  ReferenceAsset | ArtworkAsset | GuideAsset | LayerAsset;
 
 export type ThemeCategory = "expression" | "costume" | "pose" | "free";
 
@@ -50,6 +59,7 @@ export interface ArtworkDraft {
   thumbnailAssetId?: string;
   tools?: DrawingTools;
   tracing?: TracingSettings;
+  layers?: LayerStack<StoredLayer>;
   width: 960;
   height: 960;
   createdAt: string;
@@ -77,6 +87,8 @@ export function referencesAsset(
     ("canvasAssetId" in record && record.canvasAssetId === id) ||
     ("thumbnailAssetId" in record && record.thumbnailAssetId === id) ||
     ("tracing" in record && record.tracing?.assetId === id) ||
+    ("layers" in record &&
+      record.layers?.items?.some((layer) => layer.assetId === id)) ||
     ("referenceAssetId" in record && record.referenceAssetId === id)
   );
 }
@@ -115,6 +127,16 @@ export function validateArtworkDraft(value: ArtworkDraft): ArtworkDraft {
       (!isTracingSettings(value.tracing) ||
         value.tracing.assetId === value.canvasAssetId ||
         value.tracing.assetId === value.thumbnailAssetId)) ||
+    (value.layers !== undefined &&
+      (!isStoredLayerStack(value.layers) ||
+        !value.canvasAssetId ||
+        value.layers.items.some((layer) =>
+          [
+            value.canvasAssetId,
+            value.thumbnailAssetId,
+            value.tracing?.assetId,
+          ].includes(layer.assetId),
+        ))) ||
     value.width !== 960 ||
     value.height !== 960 ||
     typeof value.createdAt !== "string" ||
@@ -172,7 +194,7 @@ export async function openWorkshopDB(name = "suki-sketch") {
     if (!currentGroup.rejectors.size) pendingOpens.delete(name);
   };
   const opening = Promise.resolve().then(() =>
-    openDB<WorkshopDB>(name, 4, {
+    openDB<WorkshopDB>(name, 5, {
       upgrade(db, oldVersion, _newVersion, tx) {
         try {
           if (abandoned) {
@@ -232,6 +254,29 @@ export async function openWorkshopDB(name = "suki-sketch") {
                 unique: true,
               },
             );
+          } else {
+            // v5はストアを変えず、旧版でレイヤー作品を上書きできないよう版を上げる。
+            if (!db.objectStoreNames.contains("reflections"))
+              throw new StorageSchemaError();
+            const store = tx.objectStore("reflections");
+            if (
+              store.keyPath !== "id" ||
+              store.autoIncrement ||
+              !store.indexNames.contains("by-artwork") ||
+              !store.indexNames.contains("by-question")
+            )
+              throw new StorageSchemaError();
+            const artwork = store.index("by-artwork"),
+              question = store.index("by-question");
+            if (
+              artwork.keyPath !== "artworkId" ||
+              artwork.unique ||
+              !question.unique ||
+              !Array.isArray(question.keyPath) ||
+              JSON.stringify(question.keyPath) !==
+                JSON.stringify(["artworkId", "questionId"])
+            )
+              throw new StorageSchemaError();
           }
         } catch (error) {
           upgradeFailure = error;

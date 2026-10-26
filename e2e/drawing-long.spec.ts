@@ -1,13 +1,14 @@
 import { test, expect } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 import { DRAWING_SAVE_TIMEOUT_MS } from "./support/storageDiagnostics";
-import { paperPosition, viewState } from "./support/canvasView";
+import { paperPosition, viewState, paintLine } from "./support/canvasView";
 
 const withGuide = process.env.PLAYWRIGHT_TRACING_STRESS === "1";
 const withView = process.env.PLAYWRIGHT_VIEW_STRESS === "1";
 const withWorkspace = process.env.PLAYWRIGHT_WORKSPACE_STRESS === "1";
+const withLayers = process.env.PLAYWRIGHT_LAYER_STRESS === "1";
 
-test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ? "（1600pxの下絵あり）" : ""}${withView ? "（表示156%・30度）" : ""}${withWorkspace ? "（専用画面）" : ""}`, async ({
+test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ? "（1600pxの下絵あり）" : ""}${withView ? "（表示156%・30度）" : ""}${withWorkspace ? "（専用画面）" : ""}${withLayers ? "（5レイヤー）" : ""}`, async ({
   page,
 }, info) => {
   test.setTimeout(380_000);
@@ -45,6 +46,17 @@ test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ?
     .click();
   const pen = page.getByRole("button", { name: "ペン", exact: true });
   await expect(pen).toBeEnabled();
+  if (withLayers) {
+    await paintLine(page, 0.2);
+    await page.locator(".layer-controls summary").click();
+    for (let i = 0; i < 4; i++) {
+      await page
+        .getByRole("button", { name: "レイヤーを追加", exact: true })
+        .click();
+      await paintLine(page, 0.3 + i * 0.1);
+    }
+    await page.locator(".layer-controls summary").click();
+  }
   if (withWorkspace)
     await page
       .getByRole("button", { name: "画面いっぱいで描く", exact: true })
@@ -129,7 +141,7 @@ test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ?
     if (Date.now() - checkpoint > 20_000) {
       const saved = await snapshot();
       expect(saved.revision).toBeGreaterThan(revision);
-      expect(saved.assets).toBe(withGuide ? 3 : 2);
+      expect(saved.assets).toBe(2 + (withGuide ? 1 : 0) + (withLayers ? 5 : 0));
       revision = saved.revision;
       checkpoint = Date.now();
     }
@@ -147,6 +159,7 @@ test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ?
   );
   frames.sort((a, b) => a - b);
   const stats = {
+    withLayers,
     withWorkspace,
     withView,
     withGuide,

@@ -9,6 +9,7 @@ const commonTests = [
   "**/tracing.spec.ts",
   "**/view.spec.ts",
   "**/workspace.spec.ts",
+  "**/layers.spec.ts",
 ];
 
 // 利用可能なブラウザーを明示的に実行する。未導入を成功やスキップにしない。
@@ -30,6 +31,7 @@ export default defineConfig({
         ...commonTests,
         "**/view-touch.spec.ts",
         "**/workspace-touch.spec.ts",
+        "**/layers-touch.spec.ts",
       ],
       use: {
         ...devices["Desktop Chrome"],
