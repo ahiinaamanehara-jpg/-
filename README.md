@@ -10,7 +10,7 @@
 
 M10では、スマホのブラウザーの表示領域に合わせる「画面いっぱいで描く」を追加しました。キャンバスの上のボタンで専用画面を開くと、ページの移動を止め、縦横の空きに合わせて正方形の絵を収めます。余白に触れてもページは動きません。「通常画面に戻る」で元の画面へ戻れます。
 
-専用画面の下にはペン・消しゴム・取り消し・「道具設定」、上には保存と戻るボタンがあります。道具設定から色・線幅・拡大回転・PNG書き出しを開けます。通常画面との切替で同じCanvasを保つため、線・下絵・取り消し履歴・表示倍率は残ります。画像は引き続き960×960px、DB v4・ZIP v2のままです。実機Androidの操作感は確認待ちです。検証は[テスト記録](docs/TEST_PLAN.md)にまとめます。
+専用画面の下にはペン・消しゴム・取り消し・「道具設定」、上には保存と戻るボタンがあります。道具設定から色・線幅・拡大回転・PNG書き出しを開けます。通常画面との切替で同じCanvasを保つため、線・下絵・取り消し履歴・表示倍率は残ります。画像は引き続き960×960px、DB v4・ZIP v2のままです。単体141件・全体画面操作125件、[互換性Run #12](https://github.com/ahiinaamanehara-jpg/-/actions/runs/40298638952)でChromium 23件・Firefox 20件・WebKit 20件、計63件が成功しました。専用画面での5分描画（985ストローク）も成功しました。実機Androidの操作感は確認待ちです。詳しい結果は[テスト記録](docs/TEST_PLAN.md)を参照してください。
 
 以下はM9までの経緯です。
 
@@ -93,6 +93,8 @@ PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:e2e:long
 PLAYWRIGHT_VIEW_STRESS=1 PLAYWRIGHT_TRACING_STRESS=1 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:e2e:long
 ```
 
+専用画面も含める場合は、上のコマンドへ`PLAYWRIGHT_WORKSPACE_STRESS=1`も指定します。通常E2Eと同時に起動しないでください。
+
 Firefox／WebKitも導入できる開発環境では、共通の受け入れ・アクセシビリティテストを複数エンジンで実行できます。モバイルWebKitも実機Safariとは区別します。
 
 ```sh
@@ -121,6 +123,8 @@ PagesはActionsの「Publish test site」をmainで手動実行します。公�
 端末のIndexedDB v4に設定・推し・参考画像・作品画像・サムネイル・道具設定・振り返りを保存します。M6でもDB版は変更せず、v1〜v3のデータを削除せず移行します。古いタブが移行を妨げる場合は、そのタブを閉じて再読み込みします。サイトデータ削除や配信元変更でデータが消え得るため、PNGとバックアップZIPを端末へ残してください。公式画像は同梱・自動収集しません。
 
 ## 品質検証
+
+M10は単体141件・ローカル全体E2E125件と、[互換性Run #12](https://github.com/ahiinaamanehara-jpg/-/actions/runs/40298638952)でChromium 23件・Firefox 20件・WebKit 20件、計63件が成功しました。専用画面の枠外接触、画素とCanvasの保持、保存失敗からの復帰も検証しています。実機Androidの操作感は確認待ちです。
 
 M9は単体141件・ローカルChromiumの全体E2E121件が成功しました。表示変換後のペン・消しゴム・取消、PNG画素、再開、2本指・3本指・入力取消と履歴保持を含みます。[互換性Run #11](https://github.com/ahiinaamanehara-jpg/-/actions/runs/40086770097)でChromium 19件・Firefox 17件・WebKit 17件、計53件が成功しました。下絵付き・表示156%・30度の5分描画も成功。詳細は[テスト記録](docs/TEST_PLAN.md)を参照してください。
 
