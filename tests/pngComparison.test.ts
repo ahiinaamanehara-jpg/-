@@ -72,4 +72,33 @@ describe("保存画像の内容の比較", () => {
     expect(difference.maxVisibleDifference).toBe(2);
     expect(difference.materialChangedPixels).toBe(1);
   });
+  it("2枚のPNGから再合成した半透明の縁だけは2段階までを区別できる", () => {
+    const difference = comparePngPixels(
+      PNG.sync.write(image([18, 52, 171, 128])),
+      PNG.sync.write(image([22, 52, 171, 128])),
+      { translucentRounding: 2 },
+    );
+    expect(difference.maxVisibleDifference).toBe(2);
+    expect(difference.materialChangedPixels).toBe(0);
+  });
+  it.each([
+    [
+      [18, 52, 171, 128],
+      [24, 52, 171, 128],
+    ],
+    [
+      [18, 52, 171, 128],
+      [18, 52, 171, 129],
+    ],
+    [
+      [18, 52, 171, 255],
+      [19, 52, 171, 255],
+    ],
+  ])("再合成でも2段階超過・alpha・不透明色の変化は検出する: %#", (a, b) => {
+    expect(
+      comparePngPixels(PNG.sync.write(image(a)), PNG.sync.write(image(b)), {
+        translucentRounding: 2,
+      }).materialChangedPixels,
+    ).toBe(1);
+  });
 });

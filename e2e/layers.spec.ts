@@ -15,6 +15,7 @@ import {
 } from "./support/storageDiagnostics";
 import { readFile } from "node:fs/promises";
 import { PNG } from "pngjs";
+import { comparePngPixels } from "./support/pngComparison";
 import { unzipSync } from "fflate";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -281,7 +282,6 @@ test("レイヤーの書込不足で原子的に保存を止め、今の絵を�
   await expect(
     page.getByRole("button", { name: "ペン", exact: true }),
   ).toBeEnabled();
-  await expectCanvasUnchanged(page, drawn);
   const copied = await stored(page),
     copy = copied.artworks.find((a) => a.id !== original.id)!;
   expect(copied.artworks.find((a) => a.id === original.id)).toEqual(original);
@@ -290,6 +290,47 @@ test("レイヤーの書込不足で原子的に保存を止め、今の絵を�
     expect(original.layers!.items.map((l) => l.assetId)).not.toContain(
       item.assetId,
     );
+  const savedLayer = (data: typeof before, assetId: string) =>
+    Buffer.from(data.assets.find((asset) => asset.id === assetId)!.bytes);
+  // 変更していない下のレイヤーはRGBAまで同じ。上の既存部分も
+  // RGBAを厳密に比べ、新しく描いた領域と分けて保全を確かめる。
+  const bottom = comparePngPixels(
+    savedLayer(before, original.layers!.items[0].assetId),
+    savedLayer(copied, copy.layers!.items[0].assetId),
+  );
+  expect(bottom.sameSize).toBe(true);
+  expect(bottom.changedPixels, JSON.stringify(bottom)).toBe(0);
+  const oldTop = PNG.sync.read(
+    savedLayer(before, original.layers!.items[1].assetId),
+  );
+  const newTop = PNG.sync.read(
+    savedLayer(copied, copy.layers!.items[1].assetId),
+  );
+  expect(newTop.data.subarray(0, 960 * 600 * 4)).toEqual(
+    oldTop.data.subarray(0, 960 * 600 * 4),
+  );
+  const strokePixel = (672 * 960 + 480) * 4;
+  expect(
+    Array.from(newTop.data.subarray(strokePixel, strokePixel + 4)),
+  ).toEqual([18, 52, 171, 255]);
+  const captured = Buffer.from(drawn.split(",")[1], "base64");
+  const savedPreview = comparePngPixels(
+    captured,
+    savedLayer(copied, copy.canvasAssetId!),
+  );
+  expect(savedPreview.sameSize).toBe(true);
+  expect(savedPreview.materialChangedPixels, JSON.stringify(savedPreview)).toBe(
+    0,
+  );
+  // 再開画面は2枚それぞれのPNGの丸めを重ねる。alphaと不透明色は厳密、
+  // 半透明の縁の白背景での差だけを2/255以内として個別に検証する。
+  const rebuilt = comparePngPixels(
+    captured,
+    Buffer.from((await bitmap(page)).split(",")[1], "base64"),
+    { translucentRounding: 2 },
+  );
+  expect(rebuilt.sameSize).toBe(true);
+  expect(rebuilt.materialChangedPixels, JSON.stringify(rebuilt)).toBe(0);
   await page
     .getByRole("link", { name: "作品の詳細を見る", exact: true })
     .click();

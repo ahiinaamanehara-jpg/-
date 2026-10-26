@@ -1,6 +1,10 @@
 import { PNG } from "pngjs";
 
-export function comparePngPixels(before: Buffer, after: Buffer) {
+export function comparePngPixels(
+  before: Buffer,
+  after: Buffer,
+  options: { translucentRounding?: 1 | 2 } = {},
+) {
   const a = PNG.sync.read(before),
     b = PNG.sync.read(after);
   const sameSize = a.width === b.width && a.height === b.height;
@@ -37,10 +41,13 @@ export function comparePngPixels(before: Buffer, after: Buffer) {
         const difference = Math.abs(whiteA - whiteB);
         maxVisibleDifference = Math.max(maxVisibleDifference, difference);
         visible ||= difference > 0;
-        // 半透明色のPNG復元では、色とalphaの乗除算で最大1段階丸められる。
-        // alpha・不透明色・1段階を超える変化は許容しない。
+        // 通常は半透明のPNG復元の1段階だけ。複数の半透明画像を別々に
+        // 復元して重ねる検証では、個別画像の保持を確認した上で2段階を指定する。
+        // alphaの変化と、不透明画素の色変化は常に検出する。
         const rounding =
-          alphaA === alphaB && alphaA > 0 && alphaA < 255 ? 1 : 0;
+          alphaA === alphaB && alphaA > 0 && alphaA < 255
+            ? (options.translucentRounding ?? 1)
+            : 0;
         material ||= difference > rounding;
       }
       if (changed) {
