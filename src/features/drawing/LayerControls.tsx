@@ -59,7 +59,6 @@ export function LayerControls({
                 <button
                   type="button"
                   aria-label={`${layer.name}を${layer.visible ? "隠す" : "表示する"}`}
-                  aria-pressed={layer.visible}
                   onClick={() => onVisible(layer.id, !layer.visible)}
                 >
                   {layer.visible ? "隠す" : "表示する"}
