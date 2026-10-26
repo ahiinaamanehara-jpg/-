@@ -15,7 +15,7 @@ import {
 } from "./support/storageDiagnostics";
 import { readFile } from "node:fs/promises";
 import { PNG } from "pngjs";
-import { comparePngPixels } from "./support/pngComparison";
+import { comparePngPixels, compositeEdgeMask } from "./support/pngComparison";
 import { unzipSync } from "fflate";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -322,12 +322,20 @@ test("レイヤーの書込不足で原子的に保存を止め、今の絵を�
   expect(savedPreview.materialChangedPixels, JSON.stringify(savedPreview)).toBe(
     0,
   );
-  // 再開画面は2枚それぞれのPNGの丸めを重ねる。alphaと不透明色は厳密、
-  // 半透明の縁の白背景での差だけを2/255以内として個別に検証する。
+  // 再開画面は2枚それぞれのPNGの丸めを重ねる。重なった結果のalphaが
+  // 255でも半透明の入力が寄与する縁はある。保存した各画像からその位置を
+  // 特定し、白背景で2/255以内を区別する。alphaと不透明な入力の内部は厳密。
   const rebuilt = comparePngPixels(
     captured,
     Buffer.from((await bitmap(page)).split(",")[1], "base64"),
-    { translucentRounding: 2 },
+    {
+      translucentRounding: 2,
+      compositeEdges: compositeEdgeMask(
+        copy
+          .layers!.items.filter((item) => item.visible)
+          .map((item) => PNG.sync.read(savedLayer(copied, item.assetId))),
+      ),
+    },
   );
   expect(rebuilt.sameSize).toBe(true);
   expect(rebuilt.materialChangedPixels, JSON.stringify(rebuilt)).toBe(0);

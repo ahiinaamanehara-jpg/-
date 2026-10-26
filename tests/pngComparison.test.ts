@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { PNG } from "pngjs";
-import { comparePngPixels } from "../e2e/support/pngComparison";
+import {
+  comparePngPixels,
+  compositeEdgeMask,
+} from "../e2e/support/pngComparison";
 
 function image(rgba: number[], width = 1) {
   const png = new PNG({ width, height: 1 });
@@ -100,5 +103,51 @@ describe("保存画像の内容の比較", () => {
         translucentRounding: 2,
       }).materialChangedPixels,
     ).toBe(1);
+  });
+  it("入力の半透明部分だけを特定し、上の不透明画素に隠れた縁を除く", () => {
+    expect(
+      Array.from(
+        compositeEdgeMask([
+          image([0, 0, 0, 128, 0, 0, 0, 128, 0, 0, 0, 255], 3),
+          image([0, 0, 0, 0, 0, 0, 0, 255, 0, 0, 0, 128], 3),
+        ]),
+      ),
+    ).toEqual([1, 0, 1]);
+  });
+  it("入力から特定した縁だけは不透明な合成結果でも2段階を区別する", () => {
+    const difference = comparePngPixels(
+      PNG.sync.write(image([18, 52, 171, 255, 18, 52, 171, 255], 2)),
+      PNG.sync.write(image([20, 52, 171, 255, 19, 52, 171, 255], 2)),
+      { translucentRounding: 2, compositeEdges: new Uint8Array([1, 0]) },
+    );
+    expect(difference.materialChangedPixels).toBe(1);
+    expect(difference.materialSamples[0].x).toBe(1);
+  });
+  it.each([
+    [
+      [18, 52, 171, 255],
+      [21, 52, 171, 255],
+    ],
+    [
+      [18, 52, 171, 254],
+      [18, 52, 171, 255],
+    ],
+  ])("入力の縁でも2段階超過とalphaの変化は検出する: %#", (a, b) => {
+    expect(
+      comparePngPixels(PNG.sync.write(image(a)), PNG.sync.write(image(b)), {
+        translucentRounding: 2,
+        compositeEdges: new Uint8Array([1]),
+      }).materialChangedPixels,
+    ).toBe(1);
+  });
+  it("異なる寸法のマスクを誤って適用しない", () => {
+    const png = PNG.sync.write(image([18, 52, 171, 255]));
+    expect(() =>
+      comparePngPixels(png, png, { compositeEdges: new Uint8Array(2) }),
+    ).toThrow("寸法");
+    expect(() => compositeEdgeMask([])).toThrow("ありません");
+    expect(() =>
+      compositeEdgeMask([image([0, 0, 0, 0]), image([], 2)]),
+    ).toThrow("寸法");
   });
 });
