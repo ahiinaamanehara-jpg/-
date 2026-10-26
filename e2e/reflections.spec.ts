@@ -169,7 +169,7 @@ test("通常保存では質問を強制せず、1問をスキップしても絵�
   await start(page);
   await draw(page);
   await saved(page);
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator("dialog:modal")).toHaveCount(0);
   const before = await image(page);
   const dialog = await open(page);
   await expect(
@@ -273,7 +273,7 @@ test("絵の保存が失敗したら質問を開かず、絵を保って保存�
     .getByRole("button", { name: "振り返る（任意）", exact: true })
     .click();
   await expect(page.getByRole("alert")).toContainText("保存領域");
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator("dialog:modal")).toHaveCount(0);
   expect(await image(page)).toBe(before);
   expect((await records(page)).reflections).toHaveLength(0);
   await expect(

@@ -32,9 +32,9 @@ test.describe("モバイル入力の現在の対応範囲", () => {
     });
 
     await page.getByRole("button", { name: "端末内保存について" }).tap();
-    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.locator("dialog:modal")).toBeVisible();
     await page.getByRole("button", { name: "閉じる", exact: true }).tap();
-    await expect(page.getByRole("dialog")).not.toBeVisible();
+    await expect(page.locator("dialog:modal")).not.toBeVisible();
 
     await page.getByRole("link", { name: "自由に落書きする準備" }).tap();
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(
@@ -76,7 +76,7 @@ test("320px・文字200%の各画面で横スクロールを要求しない", as
   }
   await page.goto("#/settings/data");
   await page.getByRole("button", { name: "保存の仕組みを読む" }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.locator("dialog:modal")).toBeVisible();
   expect(
     await page
       .getByRole("dialog")

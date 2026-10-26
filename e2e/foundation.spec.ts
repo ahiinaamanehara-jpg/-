@@ -38,7 +38,7 @@ test("シートのキーボード操作とフォーカス復帰", async ({ page 
   const trigger = page.getByRole("button", { name: "端末内保存について" });
   await trigger.focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.locator("dialog:modal")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "閉じる", exact: true }),
   ).toBeFocused();
@@ -47,7 +47,7 @@ test("シートのキーボード操作とフォーカス復帰", async ({ page 
     page.getByRole("button", { name: "閉じる", exact: true }),
   ).toBeFocused();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(page.locator("dialog:modal")).not.toBeVisible();
   await expect(trigger).toBeFocused();
 });
 test("直接URL・見つからないデータ・DBの非破壊再接続", async ({ page }) => {

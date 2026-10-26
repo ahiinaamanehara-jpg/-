@@ -8,6 +8,7 @@ const commonTests = [
   "**/drawing-layout.spec.ts",
   "**/tracing.spec.ts",
   "**/view.spec.ts",
+  "**/workspace.spec.ts",
 ];
 
 // 利用可能なブラウザーを明示的に実行する。未導入を成功やスキップにしない。
@@ -25,7 +26,11 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testMatch: [...commonTests, "**/view-touch.spec.ts"],
+      testMatch: [
+        ...commonTests,
+        "**/view-touch.spec.ts",
+        "**/workspace-touch.spec.ts",
+      ],
       use: {
         ...devices["Desktop Chrome"],
         launchOptions: {

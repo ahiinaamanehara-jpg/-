@@ -174,7 +174,7 @@ test("v3の絵・道具・推し・参考画像・設定を保持してv4へ移�
     .getByRole("button", { name: "振り返る（任意）", exact: true })
     .click();
   await expect(
-    page.getByRole("dialog").getByRole("heading", { level: 3 }),
+    page.locator("dialog:modal").getByRole("heading", { level: 3 }),
   ).toHaveText("今回はどんなイラストが描けた？");
 });
 

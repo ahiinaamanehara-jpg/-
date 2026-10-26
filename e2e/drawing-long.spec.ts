@@ -5,8 +5,9 @@ import { paperPosition, viewState } from "./support/canvasView";
 
 const withGuide = process.env.PLAYWRIGHT_TRACING_STRESS === "1";
 const withView = process.env.PLAYWRIGHT_VIEW_STRESS === "1";
+const withWorkspace = process.env.PLAYWRIGHT_WORKSPACE_STRESS === "1";
 
-test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ? "（1600pxの下絵あり）" : ""}${withView ? "（表示156%・30度）" : ""}`, async ({
+test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ? "（1600pxの下絵あり）" : ""}${withView ? "（表示156%・30度）" : ""}${withWorkspace ? "（専用画面）" : ""}`, async ({
   page,
 }, info) => {
   test.setTimeout(380_000);
@@ -44,7 +45,13 @@ test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ?
     .click();
   const pen = page.getByRole("button", { name: "ペン", exact: true });
   await expect(pen).toBeEnabled();
+  if (withWorkspace)
+    await page
+      .getByRole("button", { name: "画面いっぱいで描く", exact: true })
+      .click();
   if (withView) {
+    if (withWorkspace)
+      await page.getByRole("button", { name: "道具設定", exact: true }).click();
     await page.locator(".canvas-view-controls summary").click();
     for (let i = 0; i < 2; i++)
       await page
@@ -53,7 +60,14 @@ test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ?
     for (let i = 0; i < 2; i++)
       await page.getByRole("button", { name: "右に回す", exact: true }).click();
     await page.locator(".canvas-view-controls summary").click();
+    if (withWorkspace)
+      await page
+        .getByRole("button", { name: "設定を閉じる", exact: true })
+        .click();
   }
+  const saveStatus = page.locator(
+    withWorkspace ? ".workspace-status" : ".save-status",
+  );
   const canvas = page.getByLabel("お絵描きキャンバス");
   const viewport = page.getByRole("group", {
     name: "キャンバスの表示範囲",
@@ -125,7 +139,7 @@ test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ?
   const elapsedMs = Date.now() - started;
   expect(strokes).toBeGreaterThan(300);
   await page.getByRole("button", { name: "途中で保存", exact: true }).click();
-  await expect(page.locator(".save-status")).toHaveText("保存済み", {
+  await expect(saveStatus).toHaveText("保存済み", {
     timeout: DRAWING_SAVE_TIMEOUT_MS,
   });
   const frames = await page.evaluate(
@@ -133,6 +147,7 @@ test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ?
   );
   frames.sort((a, b) => a - b);
   const stats = {
+    withWorkspace,
     withView,
     withGuide,
     elapsedMs,
@@ -157,7 +172,7 @@ test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ?
   }
   expect(undone).toBe(9);
   await page.getByRole("button", { name: "途中で保存", exact: true }).click();
-  await expect(page.locator(".save-status")).toHaveText("保存済み", {
+  await expect(saveStatus).toHaveText("保存済み", {
     timeout: DRAWING_SAVE_TIMEOUT_MS,
   });
   const before = await canvas.evaluate((node) =>

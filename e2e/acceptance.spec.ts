@@ -127,7 +127,7 @@ for (const withReference of [false, true]) {
     const pen = page.getByRole("button", { name: "ペン", exact: true });
     await expect(pen).toBeEnabled();
     const url = page.url();
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator("dialog:modal")).toHaveCount(0);
     await stroke(page);
     const drawn = await pixels(page);
     if (withReference) {
@@ -150,11 +150,11 @@ for (const withReference of [false, true]) {
     }
     await page.getByRole("button", { name: "途中で保存", exact: true }).click();
     await expectSaved(page);
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator("dialog:modal")).toHaveCount(0);
     await page
       .getByRole("button", { name: "振り返る（任意）", exact: true })
       .click();
-    const dialog = page.getByRole("dialog");
+    const dialog = page.locator("dialog:modal");
     if (withReference) {
       await dialog
         .getByLabel("自由に書く（任意）", { exact: true })

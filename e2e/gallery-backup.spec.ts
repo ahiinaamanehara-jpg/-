@@ -124,7 +124,7 @@ async function reflect(page: Page, text = "振り返りのメモ") {
   await page
     .getByRole("button", { name: "振り返る（任意）", exact: true })
     .click();
-  const d = page.getByRole("dialog");
+  const d = page.locator("dialog:modal");
   await d.getByLabel("自由に書く（任意）", { exact: true }).fill(text);
   await d.getByRole("button", { name: "回答を保存", exact: true }).click();
   await expect(
@@ -194,7 +194,7 @@ test("一覧・推し絞込・詳細・状態変更・振り返り・再開を�
     .getByRole("button", { name: "振り返りを見る・書く（任意）", exact: true })
     .click();
   await expect(
-    page.getByRole("dialog").getByText("振り返りのメモ", { exact: true }),
+    page.locator("dialog:modal").getByText("振り返りのメモ", { exact: true }),
   ).toBeVisible();
   await page
     .getByRole("dialog")
@@ -554,7 +554,7 @@ test("全消去の取消・途中失敗でデータを残し、明示確認後�
       exact: true,
     })
     .click();
-  const d = page.getByRole("dialog");
+  const d = page.locator("dialog:modal");
   await expect(
     d.getByRole("button", { name: "全データを削除する", exact: true }),
   ).toBeDisabled();
@@ -600,7 +600,7 @@ test("作品削除の途中失敗を戻し、削除済みの比較先に対す�
   await page
     .getByRole("button", { name: "振り返る（任意）", exact: true })
     .click();
-  const dialog = page.getByRole("dialog");
+  const dialog = page.locator("dialog:modal");
   await dialog
     .getByRole("button", {
       name: "前の作品との違いを考える（任意）",

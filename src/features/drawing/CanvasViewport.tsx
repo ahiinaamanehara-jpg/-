@@ -4,6 +4,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import type { Point } from "../../drawing/surface";
 import {
   FIT_VIEW,
@@ -32,6 +33,7 @@ export function CanvasViewport({
   onEnd,
   onCancel,
   onManipulating,
+  controlsTarget,
 }: {
   children: ReactNode;
   blocked: boolean;
@@ -41,6 +43,7 @@ export function CanvasViewport({
   onEnd: (id: number) => void;
   onCancel: (id: number) => void;
   onManipulating: (active: boolean) => void;
+  controlsTarget?: HTMLElement | null;
 }) {
   const viewport = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<CanvasView>({ ...FIT_VIEW });
@@ -224,119 +227,122 @@ export function CanvasViewport({
     setPanMode(false);
   };
   const controlsDisabled = blocked || interacting;
+  const controls = (
+    <details className="canvas-view-controls">
+      <summary
+        aria-disabled={controlsDisabled}
+        onClick={(event) => {
+          if (controlsDisabled) event.preventDefault();
+        }}
+      >
+        拡大・回転・移動
+      </summary>
+      <p id="canvas-view-help">
+        2本指で拡大・縮小・回転・移動できます。1本指は描画です。表示を動かすモードでは1本指でも移動でき、枠にフォーカスすると矢印キーも使えます。
+      </p>
+      <fieldset disabled={controlsDisabled}>
+        <legend className="sr-only">キャンバス表示の調整</legend>
+        <div className="canvas-view-values">
+          <p>
+            倍率<span>{Math.round(view.scale * 100)}%</span>
+          </p>
+          <p>
+            角度<span>{Math.round((view.rotation * 180) / Math.PI)}°</span>
+          </p>
+        </div>
+        <div className="canvas-view-buttons">
+          <button
+            type="button"
+            onClick={() =>
+              apply(
+                viewAround(
+                  current.current,
+                  current.current.scale / 1.25,
+                  current.current.rotation,
+                ),
+              )
+            }
+          >
+            表示を縮小
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              apply(
+                viewAround(
+                  current.current,
+                  current.current.scale * 1.25,
+                  current.current.rotation,
+                ),
+              )
+            }
+          >
+            表示を拡大
+          </button>
+          <button type="button" onClick={reset}>
+            表示を戻す
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              apply(
+                viewAround(
+                  current.current,
+                  current.current.scale,
+                  current.current.rotation - Math.PI / 12,
+                ),
+              )
+            }
+          >
+            左に回す
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              apply(
+                viewAround(
+                  current.current,
+                  current.current.scale,
+                  current.current.rotation + Math.PI / 12,
+                ),
+              )
+            }
+          >
+            右に回す
+          </button>
+        </div>
+        <div
+          className="canvas-view-modes"
+          role="group"
+          aria-label="キャンバスの操作"
+        >
+          <button
+            type="button"
+            aria-pressed={!panMode}
+            onClick={() => setPanMode(false)}
+          >
+            描く
+          </button>
+          <button
+            type="button"
+            aria-pressed={panMode}
+            onClick={() => {
+              setPanMode(true);
+              viewport.current?.focus({ preventScroll: true });
+            }}
+          >
+            表示を動かす
+          </button>
+        </div>
+      </fieldset>
+      <p className="note">
+        表示だけを調整します。保存・PNGの大きさや向きは変わりません。開き直すと全体表示に戻ります。
+      </p>
+    </details>
+  );
   return (
     <>
-      <details className="canvas-view-controls">
-        <summary
-          aria-disabled={controlsDisabled}
-          onClick={(event) => {
-            if (controlsDisabled) event.preventDefault();
-          }}
-        >
-          拡大・回転・移動
-        </summary>
-        <p id="canvas-view-help">
-          2本指で拡大・縮小・回転・移動できます。1本指は描画です。表示を動かすモードでは1本指でも移動でき、枠にフォーカスすると矢印キーも使えます。
-        </p>
-        <fieldset disabled={controlsDisabled}>
-          <legend className="sr-only">キャンバス表示の調整</legend>
-          <div className="canvas-view-values">
-            <p>
-              倍率<span>{Math.round(view.scale * 100)}%</span>
-            </p>
-            <p>
-              角度<span>{Math.round((view.rotation * 180) / Math.PI)}°</span>
-            </p>
-          </div>
-          <div className="canvas-view-buttons">
-            <button
-              type="button"
-              onClick={() =>
-                apply(
-                  viewAround(
-                    current.current,
-                    current.current.scale / 1.25,
-                    current.current.rotation,
-                  ),
-                )
-              }
-            >
-              表示を縮小
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                apply(
-                  viewAround(
-                    current.current,
-                    current.current.scale * 1.25,
-                    current.current.rotation,
-                  ),
-                )
-              }
-            >
-              表示を拡大
-            </button>
-            <button type="button" onClick={reset}>
-              表示を戻す
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                apply(
-                  viewAround(
-                    current.current,
-                    current.current.scale,
-                    current.current.rotation - Math.PI / 12,
-                  ),
-                )
-              }
-            >
-              左に回す
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                apply(
-                  viewAround(
-                    current.current,
-                    current.current.scale,
-                    current.current.rotation + Math.PI / 12,
-                  ),
-                )
-              }
-            >
-              右に回す
-            </button>
-          </div>
-          <div
-            className="canvas-view-modes"
-            role="group"
-            aria-label="キャンバスの操作"
-          >
-            <button
-              type="button"
-              aria-pressed={!panMode}
-              onClick={() => setPanMode(false)}
-            >
-              描く
-            </button>
-            <button
-              type="button"
-              aria-pressed={panMode}
-              onClick={() => {
-                setPanMode(true);
-                viewport.current?.focus({ preventScroll: true });
-              }}
-            >
-              表示を動かす
-            </button>
-          </div>
-        </fieldset>
-        <p className="note">
-          表示だけを調整します。保存・PNGの大きさや向きは変わりません。開き直すと全体表示に戻ります。
-        </p>
-      </details>
+      {controlsTarget ? createPortal(controls, controlsTarget) : controls}
       <div
         ref={viewport}
         className={`canvas-frame${tracingVisible ? " tracing-visible" : ""}${panMode ? " canvas-pan-mode" : ""}`}

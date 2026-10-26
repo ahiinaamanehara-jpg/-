@@ -1,4 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
+import {
+  expectSaved,
+  observeStorageErrors,
+} from "./support/storageDiagnostics";
 
 test.use({
   viewport: { width: 768, height: 1024 },
@@ -6,6 +10,7 @@ test.use({
   isMobile: true,
   deviceScaleFactor: 2,
 });
+test.beforeEach(async ({ page }) => observeStorageErrors(page));
 
 async function start(page: Page) {
   await page.goto("#/new");
@@ -22,7 +27,7 @@ const bitmap = (page: Page) =>
     .evaluate((c) => (c as HTMLCanvasElement).toDataURL());
 async function saved(page: Page) {
   await page.getByRole("button", { name: "途中で保存", exact: true }).tap();
-  await expect(page.locator(".save-status")).toHaveText("保存済み");
+  await expectSaved(page);
 }
 
 test("iPad相当の縦横・画面分割サイズでタッチ描画の座標と保存画像を保つ", async ({
@@ -130,7 +135,7 @@ test("タブレットの短い表示領域でも任意回答・ギャラリー�
     .getByRole("button", { name: "振り返る（任意）", exact: true })
     .tap();
   await page.setViewportSize({ width: 768, height: 420 });
-  const d = page.getByRole("dialog");
+  const d = page.locator("dialog:modal");
   await d
     .getByLabel("自由に書く（任意）", { exact: true })
     .fill("横向きでも短い落書きを残す");

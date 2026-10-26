@@ -110,7 +110,7 @@ for (const width of [320, 360]) {
     await page.getByRole("button", { name: "途中で保存", exact: true }).click();
     await expectSaved(page);
     expect(await page.evaluate(() => scrollY)).toBe(scroll);
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page.locator("dialog:modal")).toHaveCount(0);
     await page.screenshot({ path: info.outputPath("canvas-and-tools.png") });
     await page.reload();
     await expect(eraser).toBeEnabled();

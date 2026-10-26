@@ -24,6 +24,7 @@ import {
 import { BlobImage } from "../../components/BlobImage";
 import { TracingControls } from "./TracingControls";
 import { CanvasViewport } from "./CanvasViewport";
+import { DrawingWorkspace } from "./DrawingWorkspace";
 import {
   DrawingSurface,
   type Point,
@@ -590,146 +591,208 @@ function DrawingEditor({ data }: { data: DrawingData }) {
             changeTracing();
         }}
       />
-      <CanvasViewport
-        blocked={viewBlocked}
-        tracingVisible={Boolean(guide && tracing?.visible)}
-        onBegin={begin}
-        onMove={move}
-        onEnd={(id) => {
-          if (pointer.current === id) finishStroke();
-        }}
-        onCancel={cancelStroke}
-        onManipulating={setViewing}
-      >
-        {guide && tracing?.visible && (
-          <BlobImage
-            blob={guide.blob}
-            alt=""
-            aria-hidden="true"
-            className="tracing-underlay"
-            style={{ opacity: tracing.opacity / 100 }}
-          />
+      <DrawingWorkspace
+        blocked={disabled}
+        statusText={statusText}
+        statusKind={saveState.status}
+        onSave={
+          data.draft
+            ? () => {
+                void save();
+              }
+            : undefined
+        }
+        canvas={(controlsTarget) => (
+          <CanvasViewport
+            controlsTarget={controlsTarget}
+            blocked={viewBlocked}
+            tracingVisible={Boolean(guide && tracing?.visible)}
+            onBegin={begin}
+            onMove={move}
+            onEnd={(id) => {
+              if (pointer.current === id) finishStroke();
+            }}
+            onCancel={cancelStroke}
+            onManipulating={setViewing}
+          >
+            {guide && tracing?.visible && (
+              <BlobImage
+                blob={guide.blob}
+                alt=""
+                aria-hidden="true"
+                className="tracing-underlay"
+                style={{ opacity: tracing.opacity / 100 }}
+              />
+            )}
+            <canvas
+              ref={canvas}
+              width={960}
+              height={960}
+              aria-label="お絵描きキャンバス"
+              aria-describedby={
+                controlsTarget
+                  ? "canvas-view-help"
+                  : "canvas-help canvas-view-help"
+              }
+            >
+              描画にはCanvasに対応したブラウザーが必要です。
+            </canvas>
+          </CanvasViewport>
         )}
-        <canvas
-          ref={canvas}
-          width={960}
-          height={960}
-          aria-label="お絵描きキャンバス"
-          aria-describedby="canvas-help canvas-view-help"
-        >
-          描画にはCanvasに対応したブラウザーが必要です。
-        </canvas>
-      </CanvasViewport>
-      <fieldset className="drawing-tools" disabled={disabled}>
-        <legend className="sr-only">描画の道具</legend>
-        <div role="group" aria-label="道具" className="drawing-tool-buttons">
-          <button
-            type="button"
-            aria-pressed={tools.tool === "pen"}
-            onClick={() => changeTools({ ...tools, tool: "pen" })}
-          >
-            ペン
-          </button>
-          <button
-            type="button"
-            aria-pressed={tools.tool === "eraser"}
-            onClick={() => changeTools({ ...tools, tool: "eraser" })}
-          >
-            消しゴム
-          </button>
-          <button type="button" disabled={undoCount === 0} onClick={undo}>
-            取り消し
-          </button>
-        </div>
-        <div className="drawing-options">
-          <label>
-            ペンの色
-            <input
-              type="color"
-              value={tools.color}
-              onChange={(event) =>
-                changeTools({ ...tools, color: event.target.value })
-              }
-            />
-          </label>
-          <label>
-            線の太さ：{tools.width}px
-            <input
-              aria-label="線の太さ"
-              type="range"
-              min={1}
-              max={40}
-              value={tools.width}
-              onChange={(event) =>
-                changeTools({ ...tools, width: Number(event.target.value) })
-              }
-            />
-          </label>
-        </div>
-      </fieldset>
-      {saveState.error && (
-        <div role="alert" className="error">
-          <p>{saveState.error}</p>
-          {data.draft && (
-            <>
+        tools={
+          <div role="group" aria-label="道具" className="drawing-tool-buttons">
+            <button
+              type="button"
+              aria-pressed={tools.tool === "pen"}
+              onClick={() => changeTools({ ...tools, tool: "pen" })}
+            >
+              ペン
+            </button>
+            <button
+              type="button"
+              aria-pressed={tools.tool === "eraser"}
+              onClick={() => changeTools({ ...tools, tool: "eraser" })}
+            >
+              消しゴム
+            </button>
+            <button type="button" disabled={undoCount === 0} onClick={undo}>
+              取り消し
+            </button>
+          </div>
+        }
+        options={
+          <div className="drawing-options">
+            <label>
+              ペンの色
+              <input
+                type="color"
+                value={tools.color}
+                onChange={(event) =>
+                  changeTools({ ...tools, color: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              線の太さ：{tools.width}px
+              <input
+                aria-label="線の太さ"
+                type="range"
+                min={1}
+                max={40}
+                value={tools.width}
+                onChange={(event) =>
+                  changeTools({ ...tools, width: Number(event.target.value) })
+                }
+              />
+            </label>
+          </div>
+        }
+        feedback={
+          <>
+            {saveState.error && (
+              <div role="alert" className="error">
+                <p>{saveState.error}</p>
+                {data.draft && (
+                  <>
+                    <button
+                      disabled={disabled}
+                      onClick={() => {
+                        void copy();
+                      }}
+                    >
+                      今の絵を別の作品として保存
+                    </button>
+                    <button
+                      disabled={disabled}
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "画面の未保存の絵を破棄して、最新の保存内容を読み直しますか？必要な絵は先にPNGを書き出してください。",
+                          )
+                        ) {
+                          allowLeave.current = true;
+                          window.location.reload();
+                        }
+                      }}
+                    >
+                      最新の保存を読み直す
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+            {actionError && (
+              <p role="alert" className="error">
+                {actionError}
+              </p>
+            )}
+            {(importing || leaving) && (
+              <p role="status">
+                {leaving
+                  ? "絵を保存してから移動しています…"
+                  : "画像を準備しています…"}
+              </p>
+            )}
+          </>
+        }
+        actions={(focused) => (
+          <>
+            <div className="actions drawing-actions">
+              {!focused && (
+                <button
+                  className="primary"
+                  disabled={disabled || !data.draft}
+                  onClick={() => {
+                    void save();
+                  }}
+                >
+                  途中で保存
+                </button>
+              )}
               <button
-                disabled={disabled}
+                disabled={disabled || exporting}
                 onClick={() => {
-                  void copy();
+                  void exportImage();
                 }}
               >
-                今の絵を別の作品として保存
+                {exporting ? "PNGを準備中…" : "PNGを書き出す"}
               </button>
-              <button
-                disabled={disabled}
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      "画面の未保存の絵を破棄して、最新の保存内容を読み直しますか？必要な絵は先にPNGを書き出してください。",
-                    )
-                  ) {
-                    allowLeave.current = true;
-                    window.location.reload();
-                  }
-                }}
-              >
-                最新の保存を読み直す
-              </button>
-            </>
-          )}
-        </div>
-      )}
-      {actionError && (
-        <p role="alert" className="error">
-          {actionError}
-        </p>
-      )}
-      {(importing || leaving) && (
-        <p role="status">
-          {leaving
-            ? "絵を保存してから移動しています…"
-            : "画像を準備しています…"}
-        </p>
-      )}
-      <div className="actions drawing-actions">
-        <button
-          className="primary"
-          disabled={disabled || !data.draft}
-          onClick={() => {
-            void save();
-          }}
-        >
-          途中で保存
-        </button>
-        <button
-          disabled={disabled || exporting}
-          onClick={() => {
-            void exportImage();
-          }}
-        >
-          {exporting ? "PNGを準備中…" : "PNGを書き出す"}
-        </button>
-      </div>
+            </div>
+            {exportFile && (
+              <div className="export-result">
+                <p>PNGを用意しました。取得できない場合はこちらから開けます。</p>
+                <div className="actions">
+                  <a
+                    className="button"
+                    href={exportFile.url}
+                    download={exportFile.file.name}
+                  >
+                    PNGをダウンロード
+                  </a>
+                  <a
+                    className="button"
+                    href={exportFile.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    画像を開く
+                  </a>
+                  {typeof navigator.share === "function" &&
+                    navigator.canShare?.({ files: [exportFile.file] }) && (
+                      <button
+                        onClick={() => {
+                          void share();
+                        }}
+                      >
+                        端末の機能で共有する
+                      </button>
+                    )}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      />
       <p id="canvas-help" className="note">
         指・ペン・マウスで描けます。自由描画はポインター操作が必要です。キャンバスの外は通常どおりスクロールできます。
       </p>
@@ -752,38 +815,6 @@ function DrawingEditor({ data }: { data: DrawingData }) {
           {openingReflection ? "絵を保存しています…" : "振り返る（任意）"}
         </button>
       </div>
-      {exportFile && (
-        <div className="export-result">
-          <p>PNGを用意しました。取得できない場合はこちらから開けます。</p>
-          <div className="actions">
-            <a
-              className="button"
-              href={exportFile.url}
-              download={exportFile.file.name}
-            >
-              PNGをダウンロード
-            </a>
-            <a
-              className="button"
-              href={exportFile.url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              画像を開く
-            </a>
-            {typeof navigator.share === "function" &&
-              navigator.canShare?.({ files: [exportFile.file] }) && (
-                <button
-                  onClick={() => {
-                    void share();
-                  }}
-                >
-                  端末の機能で共有する
-                </button>
-              )}
-          </div>
-        </div>
-      )}
       <details className="drawing-import">
         <summary>紙や他のアプリの絵を取り込む</summary>
         <p>

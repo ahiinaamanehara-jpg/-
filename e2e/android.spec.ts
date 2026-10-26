@@ -187,11 +187,11 @@ test("Android相当の小画面で推し・テーマ・タッチ描画・消し�
     .click();
   expect(await bitmap(page)).toBe(before);
   await saved(page);
-  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.locator("dialog:modal")).toHaveCount(0);
   await page
     .getByRole("button", { name: "振り返る（任意）", exact: true })
     .click();
-  const d = page.getByRole("dialog");
+  const d = page.locator("dialog:modal");
   await d
     .getByRole("button", { name: "この質問をスキップ", exact: true })
     .click();

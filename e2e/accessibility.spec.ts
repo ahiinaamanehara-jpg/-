@@ -229,7 +229,7 @@ test("7種類の画面幅と文字200%で主要画面・短いシートを操作
   await page
     .getByRole("button", { name: "振り返る（任意）", exact: true })
     .click();
-  const d = page.getByRole("dialog");
+  const d = page.locator("dialog:modal");
   await d
     .getByLabel("自由に書く（任意）", { exact: true })
     .fill("短い画面でも入力できる");
@@ -273,7 +273,7 @@ test("キーボードで道具・シート・作品詳細・削除確認を操�
   ).toHaveAttribute("aria-pressed", "true");
   await byKeyboard(page, hint);
   await page.keyboard.press("Enter");
-  const d = page.getByRole("dialog"),
+  const d = page.locator("dialog:modal"),
     close = d.getByRole("button", { name: "閉じる", exact: true });
   await expect(close).toBeFocused();
   await page.keyboard.press("Shift+Tab");

@@ -262,7 +262,7 @@ test("参考画像の置換・削除と推しの削除を確認付きで行う",
   await page
     .getByRole("button", { name: "この推しを削除", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.locator("dialog:modal")).toBeVisible();
   await page.keyboard.press("Escape");
   expect((await records(page)).characters).toHaveLength(1);
   await page
