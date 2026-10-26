@@ -122,9 +122,15 @@ export function DrawingWorkspace({
     return () => observer.disconnect();
   }, [focused]);
 
-  const closeOptions = () => {
+  const closePanel = () => {
+    const returnFocus =
+      panel === "tools"
+        ? optionsButton.current
+        : dialog.current?.querySelector<HTMLButtonElement>(
+            ".support-buttons button[aria-expanded='true']",
+          );
     setPanel(undefined);
-    optionsButton.current?.focus({ preventScroll: true });
+    returnFocus?.focus({ preventScroll: focused });
   };
   return (
     <>
@@ -142,9 +148,7 @@ export function DrawingWorkspace({
         >
           画面いっぱいで描く
         </button>
-        <p className="note">
-          スマホの画面に合わせた専用の枠で描けます。周囲に触れてもページは動きません。
-        </p>
+        <p className="note">周囲に触れてもページは動きません。</p>
       </div>
       <dialog
         ref={dialog}
@@ -155,11 +159,17 @@ export function DrawingWorkspace({
         aria-describedby={focused ? `${id}-help` : undefined}
         onCancel={(event) => {
           event.preventDefault();
-          if (panel === "tools") closeOptions();
-          else if (panel) setPanel(undefined);
+          if (panel) closePanel();
           else if (!blocked) setFocused(false);
         }}
         onKeyDown={(event) => {
+          // 表示設定はPortalで配置するため、描画枠側でもEscapeを受ける。
+          if (event.key === "Escape" && panel && !event.defaultPrevented) {
+            event.preventDefault();
+            event.stopPropagation();
+            closePanel();
+            return;
+          }
           if (!focused || event.key !== "Tab") return;
           const items = Array.from(
             event.currentTarget.querySelectorAll<HTMLElement>(
@@ -271,7 +281,7 @@ export function DrawingWorkspace({
         >
           <div className="workspace-options-heading">
             <h2>色・線幅・書き出し</h2>
-            <button type="button" disabled={blocked} onClick={closeOptions}>
+            <button type="button" disabled={blocked} onClick={closePanel}>
               設定を閉じる
             </button>
           </div>

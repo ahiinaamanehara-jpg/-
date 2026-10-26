@@ -1017,6 +1017,9 @@ textarea {
 .workspace-entry {
   margin: 16px 0;
 }
+.workspace-entry .note {
+  margin: 8px 0;
+}
 .drawing-support-controls {
   position: relative;
   margin: 16px 0;

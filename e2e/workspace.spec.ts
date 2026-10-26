@@ -270,7 +270,9 @@ test("専用画面でも保存不足で絵を保ち、PNG退避・再試行と�
   await workspace(page)
     .getByRole("button", { name: "途中で保存", exact: true })
     .click();
-  await expect(workspace(page).getByRole("alert")).toContainText("保存領域");
+  await expect(workspace(page).getByRole("alert")).toContainText("保存領域", {
+    timeout: DRAWING_SAVE_TIMEOUT_MS,
+  });
   expect(await revision(page)).toEqual(before);
   await expectCanvasUnchanged(page, drawn);
   await workspace(page)

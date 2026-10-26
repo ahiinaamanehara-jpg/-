@@ -76,6 +76,9 @@ test("3つの入口を並べ、設定の切替でも絵・下絵・選択先を�
   await page.getByRole("button", { name: "表示を拡大", exact: true }).click();
   await page.getByRole("button", { name: "右に回す", exact: true }).click();
   expect((await viewState(page)).scale).toBeCloseTo(1.25, 5);
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".support-panel")).toBeHidden();
+  await expect(featureButton(page, "拡大・回転")).toBeFocused();
   await featureButton(page, "下絵をなぞる").click();
   await page
     .getByRole("button", { name: "サポートを閉じる", exact: true })
@@ -178,6 +181,16 @@ test("専用画面でも直接開け、小画面・文字200%・キーボード�
   await expect(page.locator(".workspace-options")).toBeHidden();
   await expect(tools).toBeFocused();
   await expect(workspace).toBeVisible();
+  await featureButton(page, "拡大・回転").click();
+  await page.getByRole("button", { name: "表示を動かす", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(".support-panel")).toBeHidden();
+  await expect(featureButton(page, "拡大・回転")).toBeFocused();
+  await expect(workspace).toBeVisible();
+  await featureButton(page, "拡大・回転").click();
+  await page.getByRole("button", { name: "描く", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(featureButton(page, "拡大・回転")).toBeFocused();
   await page.setViewportSize({ width: 320, height: 568 });
   await page.evaluate(() => {
     document.documentElement.style.fontSize = "200%";
