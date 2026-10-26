@@ -25,7 +25,7 @@ test.setTimeout(60_000);
 test.beforeEach(async ({ page }) => observeStorageErrors(page));
 const panel = (page: Page) => page.locator(".layer-controls");
 async function openLayers(page: Page) {
-  await panel(page).locator("summary").click();
+  await page.getByRole("button", { name: "レイヤー", exact: true }).click();
 }
 async function add(page: Page) {
   await panel(page)
@@ -94,7 +94,9 @@ test("1枚のまま始め、選択中だけを消去し、重なり・非表示�
   page,
 }) => {
   await startDrawing(page);
-  await expect(panel(page)).not.toHaveAttribute("open", "");
+  await expect(
+    page.getByRole("button", { name: "レイヤー", exact: true }),
+  ).toHaveAttribute("aria-expanded", "false");
   await color(page, "#dd2211");
   await paintLine(page);
   await save(page);
@@ -368,7 +370,6 @@ test("5枚でも小画面・文字200%・専用画面で操作でき、壊れた
   await page
     .getByRole("button", { name: "画面いっぱいで描く", exact: true })
     .click();
-  await page.getByRole("button", { name: "道具設定", exact: true }).click();
   await openLayers(page);
   await page.setViewportSize({ width: 320, height: 640 });
   await page.evaluate(() => {
@@ -406,7 +407,9 @@ test("5枚でも小画面・文字200%・専用画面で操作でき、壊れた
   await layerChoice.scrollIntoViewIfNeeded();
   await expect(layerChoice).toBeInViewport();
   await page.screenshot({ path: info.outputPath("layers-text-200.png") });
-  await page.getByRole("button", { name: "設定を閉じる", exact: true }).click();
+  await page
+    .getByRole("button", { name: "サポートを閉じる", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "通常画面に戻る", exact: true })
     .click();

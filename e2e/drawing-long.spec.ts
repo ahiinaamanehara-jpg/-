@@ -48,34 +48,28 @@ test(`5分間の反復描画・定期保存・履歴上限・再開${withGuide ?
   await expect(pen).toBeEnabled();
   if (withLayers) {
     await paintLine(page, 0.2);
-    await page.locator(".layer-controls summary").click();
+    await page.getByRole("button", { name: "レイヤー", exact: true }).click();
     for (let i = 0; i < 4; i++) {
       await page
         .getByRole("button", { name: "レイヤーを追加", exact: true })
         .click();
       await paintLine(page, 0.3 + i * 0.1);
     }
-    await page.locator(".layer-controls summary").click();
+    await page.getByRole("button", { name: "レイヤー", exact: true }).click();
   }
   if (withWorkspace)
     await page
       .getByRole("button", { name: "画面いっぱいで描く", exact: true })
       .click();
   if (withView) {
-    if (withWorkspace)
-      await page.getByRole("button", { name: "道具設定", exact: true }).click();
-    await page.locator(".canvas-view-controls summary").click();
+    await page.getByRole("button", { name: "拡大・回転", exact: true }).click();
     for (let i = 0; i < 2; i++)
       await page
         .getByRole("button", { name: "表示を拡大", exact: true })
         .click();
     for (let i = 0; i < 2; i++)
       await page.getByRole("button", { name: "右に回す", exact: true }).click();
-    await page.locator(".canvas-view-controls summary").click();
-    if (withWorkspace)
-      await page
-        .getByRole("button", { name: "設定を閉じる", exact: true })
-        .click();
+    await page.getByRole("button", { name: "拡大・回転", exact: true }).click();
   }
   const saveStatus = page.locator(
     withWorkspace ? ".workspace-status" : ".save-status",

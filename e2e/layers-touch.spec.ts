@@ -23,7 +23,7 @@ test("専用画面の指描画でレイヤーだけを消去し、2本指の取�
   await page
     .getByRole("slider", { name: "線の太さ", exact: true })
     .press("End");
-  await page.locator(".layer-controls summary").tap();
+  await page.getByRole("button", { name: "レイヤー", exact: true }).tap();
   await page.getByRole("button", { name: "レイヤーを追加", exact: true }).tap();
   await page
     .getByRole("button", { name: "レイヤー1に描く", exact: true })
@@ -55,11 +55,14 @@ test("専用画面の指描画でレイヤーだけを消去し、2本指の取�
     await line();
     expect(await canvasPixel(page)).toEqual([221, 34, 17, 255]);
     // ローカルChromiumのタッチ後のUI制約はmouse clickと区別する。
-    await page.getByRole("button", { name: "道具設定", exact: true }).click();
-    await page.locator(".layer-controls summary").click();
+    await page.getByRole("button", { name: "レイヤー", exact: true }).click();
     await page
       .getByRole("button", { name: "レイヤー2に描く", exact: true })
       .click();
+    await page
+      .getByRole("button", { name: "サポートを閉じる", exact: true })
+      .click();
+    await page.getByRole("button", { name: "道具設定", exact: true }).click();
     await page.getByLabel("ペンの色", { exact: true }).fill("#1234ab");
     await page
       .getByRole("button", { name: "設定を閉じる", exact: true })

@@ -228,15 +228,7 @@ export function CanvasViewport({
   };
   const controlsDisabled = blocked || interacting;
   const controls = (
-    <details className="canvas-view-controls">
-      <summary
-        aria-disabled={controlsDisabled}
-        onClick={(event) => {
-          if (controlsDisabled) event.preventDefault();
-        }}
-      >
-        拡大・回転・移動
-      </summary>
+    <div className="canvas-view-controls">
       <p id="canvas-view-help">
         2本指で拡大・縮小・回転・移動できます。1本指は描画です。表示を動かすモードでは1本指でも移動でき、枠にフォーカスすると矢印キーも使えます。
       </p>
@@ -338,7 +330,7 @@ export function CanvasViewport({
       <p className="note">
         表示だけを調整します。保存・PNGの大きさや向きは変わりません。開き直すと全体表示に戻ります。
       </p>
-    </details>
+    </div>
   );
   return (
     <>

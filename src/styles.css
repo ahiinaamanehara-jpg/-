@@ -624,12 +624,6 @@ textarea {
 .canvas-view-controls {
   margin: 16px 0;
 }
-.canvas-view-controls summary {
-  cursor: pointer;
-  min-height: 44px;
-  padding: 8px 0;
-  color: #75472e;
-}
 .canvas-view-controls fieldset {
   min-width: 0;
 }
@@ -709,12 +703,6 @@ textarea {
 }
 .tracing-controls {
   margin: 16px 0;
-}
-.tracing-controls summary {
-  cursor: pointer;
-  min-height: 44px;
-  padding: 8px 0;
-  color: #75472e;
 }
 .tracing-controls fieldset,
 .tracing-setup {
@@ -1029,6 +1017,98 @@ textarea {
 .workspace-entry {
   margin: 16px 0;
 }
+.drawing-support-controls {
+  position: relative;
+  margin: 16px 0;
+  min-width: 0;
+}
+.support-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-bottom: 8px;
+}
+.support-heading h2 {
+  font-size: 1rem;
+  font-weight: 650;
+  margin: 0;
+}
+.support-heading p {
+  font-size: 0.875rem;
+  margin: 0;
+}
+.support-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 5rem), 1fr));
+  gap: 8px;
+}
+.support-buttons button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 4px;
+  background: #f1e9dc;
+  border-color: #ab8c70;
+}
+.support-buttons svg {
+  flex-shrink: 0;
+}
+.support-label {
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+.support-label > span {
+  display: inline-block;
+  white-space: nowrap;
+}
+.support-state {
+  font-size: 0.8125rem;
+  color: #5d5144;
+  overflow-wrap: anywhere;
+}
+.support-buttons button[aria-expanded="true"] {
+  background: #805236;
+  border-color: #805236;
+  color: #fff;
+}
+.support-buttons button[aria-expanded="true"] .support-state {
+  color: inherit;
+}
+.support-panel {
+  margin-top: 12px;
+  padding: 16px;
+  background: #fffdf8;
+  border: 1px solid #ab8c70;
+  border-radius: 12px;
+  min-width: 0;
+}
+.support-panel[hidden] {
+  display: none;
+}
+.support-panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid #d0c3b0;
+  padding-bottom: 12px;
+}
+.support-panel-heading h3 {
+  font-size: 1.125rem;
+  font-weight: 650;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.support-panel-heading button {
+  flex: 0 0 auto;
+}
 dialog.drawing-workspace {
   position: static;
   display: block;
@@ -1060,8 +1140,8 @@ dialog.drawing-workspace.is-focused {
     env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   background: #e9e3d9;
   display: grid;
-  grid-template-areas: "heading" "feedback" "stage" "tools";
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-areas: "heading" "support" "feedback" "stage" "tools";
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   overflow: hidden;
   overscroll-behavior: none;
 }
@@ -1072,7 +1152,7 @@ dialog.drawing-workspace.is-focused {
   grid-area: heading;
   padding: 8px;
   background: #faf6ef;
-  max-height: 40dvh;
+  max-height: 35dvh;
   overflow: auto;
   overscroll-behavior: contain;
 }
@@ -1117,7 +1197,7 @@ dialog.drawing-workspace.is-focused {
   padding: 8px;
   border-radius: 0;
   margin: 0;
-  max-height: 35dvh;
+  max-height: 28dvh;
   overflow: auto;
   overscroll-behavior: contain;
 }
@@ -1137,14 +1217,40 @@ dialog.drawing-workspace.is-focused {
   overflow: auto;
   overscroll-behavior: contain;
 }
-.is-focused .workspace-options {
+.is-focused .drawing-support-controls {
+  grid-area: support;
+  position: static;
+  margin: 0;
+  padding: 0 8px 8px;
+  background: #fffdf8;
+}
+.is-focused .support-buttons {
+  max-height: 20dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y pinch-zoom;
+}
+.is-focused .support-buttons button {
+  flex-direction: row;
+  gap: 4px;
+  padding: 6px 4px;
+}
+.is-focused .support-buttons svg {
+  width: 18px;
+  height: 18px;
+}
+.is-focused .support-state {
+  display: none;
+}
+.is-focused .workspace-options,
+.is-focused .support-panel {
   position: absolute;
   z-index: 1;
-  inset: 0;
+  inset: calc(var(--workspace-panel-top, 25%) + 8px) 8px 8px;
   margin: auto;
-  width: min(100%, 640px);
+  width: min(calc(100% - 16px), 640px);
   height: fit-content;
-  max-height: 70%;
+  max-height: calc(100% - var(--workspace-panel-top, 25%) - 24px);
   padding: 16px;
   border: 1px solid #93775f;
   border-radius: 12px;
@@ -1167,12 +1273,6 @@ dialog.drawing-workspace.is-focused {
 
 .layer-controls {
   margin: 16px 0;
-}
-.layer-controls summary {
-  min-height: 44px;
-  padding: 8px 0;
-  cursor: pointer;
-  color: #75472e;
 }
 .layer-controls fieldset {
   min-width: 0;

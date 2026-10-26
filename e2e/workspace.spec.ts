@@ -51,11 +51,11 @@ test("専用画面への切替でCanvas・線・下絵・履歴・倍率を保�
   await paintLine(page, 0.3);
   const original = await bitmap(page);
   const canvas = await page.getByLabel("お絵描きキャンバス").elementHandle();
-  await page.locator(".canvas-view-controls summary").click();
+  await page.getByRole("button", { name: "拡大・回転", exact: true }).click();
   await page.getByRole("button", { name: "表示を拡大", exact: true }).click();
   await page.getByRole("button", { name: "右に回す", exact: true }).click();
   const view = await viewState(page);
-  await page.locator(".canvas-view-controls summary").click();
+  await page.getByRole("button", { name: "拡大・回転", exact: true }).click();
   await open(page);
   expect(
     await canvas!.evaluate(
@@ -85,12 +85,15 @@ test("専用画面への切替でCanvas・線・下絵・履歴・倍率を保�
     .getByRole("button", { name: "途中で保存", exact: true })
     .click();
   await saved(page);
+  await page.getByRole("button", { name: "拡大・回転", exact: true }).click();
+  await page.getByRole("button", { name: "表示を拡大", exact: true }).click();
+  expect((await viewState(page)).scale).toBeCloseTo(1.5625, 5);
+  await workspace(page)
+    .getByRole("button", { name: "サポートを閉じる", exact: true })
+    .click();
   await workspace(page)
     .getByRole("button", { name: "道具設定", exact: true })
     .click();
-  await page.locator(".canvas-view-controls summary").click();
-  await page.getByRole("button", { name: "表示を拡大", exact: true }).click();
-  expect((await viewState(page)).scale).toBeCloseTo(1.5625, 5);
   const download = page.waitForEvent("download");
   await workspace(page)
     .getByRole("button", { name: "PNGを書き出す", exact: true })
@@ -188,7 +191,7 @@ test("スマホ縦横・320px・文字200%で画面内へ収まり、枠外の�
   await page.keyboard.press("Tab");
   await expect(close).toBeFocused();
   await more.click();
-  await page.locator(".canvas-view-controls summary").click();
+  await page.getByRole("button", { name: "拡大・回転", exact: true }).click();
   const audit = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
     .analyze();
@@ -207,12 +210,16 @@ test("スマホ縦横・320px・文字200%で画面内へ収まり、枠外の�
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  const panel = page.locator(".workspace-options");
+  const panel = page.locator(".support-panel");
   await panel.hover();
   await page.mouse.wheel(0, 800);
   await expect
     .poll(() => panel.evaluate((el) => el.scrollTop))
     .toBeGreaterThan(0);
+  await workspace(page)
+    .getByRole("button", { name: "サポートを閉じる", exact: true })
+    .click();
+  await more.click();
   await page
     .getByRole("slider", { name: "線の太さ", exact: true })
     .press("End");

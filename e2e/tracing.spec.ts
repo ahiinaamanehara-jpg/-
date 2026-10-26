@@ -105,9 +105,12 @@ async function save(page: Page) {
   await expectSaved(page);
 }
 async function controls(page: Page) {
-  const details = page.locator(".tracing-controls details");
-  if (!((await details.getAttribute("open")) !== null))
-    await details.locator("summary").click();
+  const button = page.getByRole("button", {
+    name: "下絵をなぞる",
+    exact: true,
+  });
+  if ((await button.getAttribute("aria-expanded")) === "false")
+    await button.click();
 }
 async function records(page: Page) {
   return page.evaluate(

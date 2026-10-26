@@ -18,8 +18,7 @@ export function LayerControls({
   onRemove: (id: string) => void;
 }) {
   return (
-    <details className="layer-controls">
-      <summary>レイヤー（任意）</summary>
+    <div className="layer-controls">
       <p>
         レイヤーは、重ねられる透明な紙のようなものです。線と色などを分けたいときに使えます。普段は1枚のままで描けます。上の行ほど手前に重なり、消しゴムは選んだ1枚だけに使えます。
       </p>
@@ -102,6 +101,6 @@ export function LayerControls({
       <p className="note">
         追加・削除・表示切替・順序の変更も「取り消し」で戻せます。PNGは表示中のレイヤーを重ねた画像になり、分けた状態は保存・バックアップZIPに残ります。
       </p>
-    </details>
+    </div>
   );
 }

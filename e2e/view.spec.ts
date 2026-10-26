@@ -28,7 +28,7 @@ test("表示だけを拡大・90度回転・移動し、下絵と線を合わせ
   await page.getByRole("button", { name: "途中で保存", exact: true }).click();
   await expectSaved(page);
   const initial = await revision(page);
-  await page.locator(".canvas-view-controls summary").click();
+  await page.getByRole("button", { name: "拡大・回転", exact: true }).click();
   for (let i = 0; i < 2; i++)
     await page.getByRole("button", { name: "表示を拡大", exact: true }).click();
   for (let i = 0; i < 6; i++)
@@ -85,7 +85,7 @@ test("表示の上限・縮小・リセットと移動モードが使え、320px
 }, info) => {
   await startDrawing(page);
   const blank = await bitmap(page);
-  await page.locator(".canvas-view-controls summary").click();
+  await page.getByRole("button", { name: "拡大・回転", exact: true }).click();
   for (let i = 0; i < 6; i++)
     await page.getByRole("button", { name: "表示を縮小", exact: true }).click();
   expect((await viewState(page)).scale).toBe(0.5);

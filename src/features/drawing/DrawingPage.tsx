@@ -608,26 +608,6 @@ function DrawingEditor({ data }: { data: DrawingData }) {
           alt={`${data.character?.name ?? "推し"}の参考画像`}
         />
       )}
-      <TracingControls
-        settings={tracing}
-        guide={guide}
-        hasReference={Boolean(data.reference)}
-        disabled={disabled}
-        warning={guideWarning}
-        onFile={(event) => {
-          const file = event.currentTarget.files?.[0];
-          event.currentTarget.value = "";
-          if (file) void chooseGuide(file);
-        }}
-        onReference={() => {
-          if (data.reference) void chooseGuide(data.reference);
-        }}
-        onSettings={changeTracing}
-        onRemove={() => {
-          if (window.confirm("下絵を外しますか？描いた線はそのまま残ります。"))
-            changeTracing();
-        }}
-      />
       <DrawingWorkspace
         blocked={disabled}
         statusText={statusText}
@@ -639,7 +619,38 @@ function DrawingEditor({ data }: { data: DrawingData }) {
               }
             : undefined
         }
-        canvas={(controlsTarget) => (
+        tracingStatus={
+          tracing
+            ? tracing.visible && guide
+              ? "下絵を表示中"
+              : "下絵は非表示"
+            : "画像を選べます"
+        }
+        layerCount={layers.items.length}
+        tracing={
+          <TracingControls
+            settings={tracing}
+            guide={guide}
+            hasReference={Boolean(data.reference)}
+            disabled={disabled}
+            onFile={(event) => {
+              const file = event.currentTarget.files?.[0];
+              event.currentTarget.value = "";
+              if (file) void chooseGuide(file);
+            }}
+            onReference={() => {
+              if (data.reference) void chooseGuide(data.reference);
+            }}
+            onSettings={changeTracing}
+            onRemove={() => {
+              if (
+                window.confirm("下絵を外しますか？描いた線はそのまま残ります。")
+              )
+                changeTracing();
+            }}
+          />
+        }
+        canvas={(controlsTarget, focused) => (
           <CanvasViewport
             controlsTarget={controlsTarget}
             blocked={viewBlocked}
@@ -667,9 +678,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
               height={960}
               aria-label="お絵描きキャンバス"
               aria-describedby={
-                controlsTarget
-                  ? "canvas-view-help"
-                  : "canvas-help canvas-view-help"
+                focused ? "canvas-view-help" : "canvas-help canvas-view-help"
               }
             >
               描画にはCanvasに対応したブラウザーが必要です。
@@ -759,7 +768,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
             </div>
           </>
         }
-        extraOptions={
+        layers={
           <LayerControls
             layers={layers}
             disabled={disabled}
@@ -780,6 +789,11 @@ function DrawingEditor({ data }: { data: DrawingData }) {
         }
         feedback={
           <>
+            {guideWarning && (
+              <p role="alert" className="error">
+                {guideWarning}
+              </p>
+            )}
             {saveState.error && (
               <div role="alert" className="error">
                 <p>{saveState.error}</p>
