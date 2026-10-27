@@ -1,0 +1,26 @@
+{
+  "project": "MB-Lab / ManuelBastioniLAB",
+  "revision": "063bff04e60f3e7c651fda628c30f5d83f3f3078",
+  "files": {
+    "mblab-library.blend": {
+      "url": "https://raw.githubusercontent.com/animate1978/MB-Lab/063bff04e60f3e7c651fda628c30f5d83f3f3078/data/humanoid_library.blend",
+      "sha256": "ae2a03430be1ef0f74a9bfa01136579e88beb521c9db7d496b5921bec6d1cd4e"
+    },
+    "anime-female-weights.json": {
+      "url": "https://raw.githubusercontent.com/animate1978/MB-Lab/063bff04e60f3e7c651fda628c30f5d83f3f3078/data/vgroups/anime_female_vgroups_base.json",
+      "sha256": "e2c375bcd2d2b14d4ab2851e61cadd094114b2b3ec71b80d046ea7cb7c20ca18"
+    },
+    "anime-female-joints.json": {
+      "url": "https://raw.githubusercontent.com/animate1978/MB-Lab/063bff04e60f3e7c651fda628c30f5d83f3f3078/data/joints/anime_female_joints.json",
+      "sha256": "c36b48fa5914287f624440e7cdd659223925ede4b0d765795bcef39815d3ee96"
+    },
+    "anime-female-albedo.png": {
+      "url": "https://raw.githubusercontent.com/animate1978/MB-Lab/063bff04e60f3e7c651fda628c30f5d83f3f3078/data/textures/anime_female_albedo.png",
+      "sha256": "d7a6ed7ee76fea53eb63b263f7256fbee7d5bc889df8bd8a62489db25165070c"
+    },
+    "mblab-license.txt": {
+      "url": "https://raw.githubusercontent.com/animate1978/MB-Lab/063bff04e60f3e7c651fda628c30f5d83f3f3078/license.txt",
+      "sha256": "021a9f55e1d9938486e39c566445c4363c40366ac2aa47d81738f22126e16cf9"
+    }
+  }
+}

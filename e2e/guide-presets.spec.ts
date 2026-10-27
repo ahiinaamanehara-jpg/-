@@ -106,17 +106,17 @@ function inkIn(png: PNG, x0: number, x1: number, y0: number, y1: number) {
       if (png.data[(y * png.width + x) * 4 + 3] > 0) total++;
   return total;
 }
-function noseCenter(png: PNG) {
+function faceDetailsCenter(png: PNG) {
   let total = 0,
     xsum = 0;
-  for (let y = 336; y < 432; y++)
+  for (let y = 285; y < 440; y++)
     for (let x = 0; x < png.width; x++) {
       const p = (y * png.width + x) * 4;
       if (
-        png.data[p] === 137 &&
-        png.data[p + 1] === 124 &&
-        png.data[p + 2] === 112 &&
-        png.data[p + 3] === 255
+        png.data[p] < 80 &&
+        png.data[p + 1] < 80 &&
+        png.data[p + 2] < 80 &&
+        png.data[p + 3] > 240
       ) {
         total++;
         xsum += x;
@@ -124,6 +124,19 @@ function noseCenter(png: PNG) {
     }
   expect(total).toBeGreaterThan(10);
   return xsum / total;
+}
+
+function faceSpan(png: PNG, y0: number, y1: number) {
+  let left = png.width,
+    right = -1;
+  for (let y = y0; y < y1; y++)
+    for (let x = 0; x < png.width; x++)
+      if (png.data[(y * png.width + x) * 4 + 3] > 240) {
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+      }
+  expect(right).toBeGreaterThan(left);
+  return { left, right };
 }
 
 test("画像なしで5方向の顔から胸元のあたりを選び、PNGを描画・保存再開できる", async ({
@@ -169,16 +182,19 @@ test("画像なしで5方向の顔から胸元のあたりを選び、PNGを描�
     expect(inkIn(png, 0, 960, 920, 960)).toBe(0);
   }
   expect(hashes.size).toBe(5);
-  expect(inkIn(pictures.get("左横顔")!, 210, 270, 300, 390)).toBeGreaterThan(
-    20,
+  // A profile's nose projects beyond its forehead on the labelled side.
+  const leftProfile = pictures.get("左横顔")!,
+    rightProfile = pictures.get("右横顔")!;
+  expect(faceSpan(leftProfile, 400, 460).left).toBeLessThan(
+    faceSpan(leftProfile, 250, 300).left - 8,
   );
-  expect(inkIn(pictures.get("左横顔")!, 690, 750, 300, 390)).toBe(0);
-  expect(inkIn(pictures.get("右横顔")!, 690, 750, 300, 390)).toBeGreaterThan(
-    20,
+  expect(faceSpan(rightProfile, 400, 460).right).toBeGreaterThan(
+    faceSpan(rightProfile, 250, 300).right + 8,
   );
-  expect(inkIn(pictures.get("右横顔")!, 210, 270, 300, 390)).toBe(0);
-  expect(noseCenter(pictures.get("左斜め")!)).toBeLessThan(442);
-  expect(noseCenter(pictures.get("右斜め")!)).toBeGreaterThan(518);
+  expect(faceDetailsCenter(pictures.get("正面")!)).toBeGreaterThan(460);
+  expect(faceDetailsCenter(pictures.get("正面")!)).toBeLessThan(500);
+  expect(faceDetailsCenter(pictures.get("左斜め")!)).toBeLessThan(442);
+  expect(faceDetailsCenter(pictures.get("右斜め")!)).toBeGreaterThan(518);
   const chosen = hash(await previewBytes(page, ".tracing-preview"));
   await page
     .getByRole("button", { name: "この下絵で描きはじめる", exact: true })
@@ -208,10 +224,26 @@ test("画像なしで5方向の顔から胸元のあたりを選び、PNGを描�
   expect(external).toEqual([]);
 });
 
-test("下絵の入替取消・生成失敗・保存不足でも元の絵を保ち、確認後に再試行できる", async ({
+test("旧下絵の入替取消・読込失敗・生成失敗・保存不足でも元の絵を保ち、再試行できる", async ({
   page,
 }) => {
-  await startPreset(page);
+  // A bitmap saved by M14 has no dependency on the new bundled assets.
+  await page.goto("#/new");
+  await page
+    .getByRole("radio", { name: "下絵をなぞって描く", exact: true })
+    .check();
+  await page
+    .getByLabel("下絵にする画像を選ぶ", { exact: true })
+    .setInputFiles("e2e/fixtures/legacy-guide.png");
+  await expect(
+    page.getByRole("img", { name: "選んだ下絵", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "この下絵で描きはじめる", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "ペン", exact: true }),
+  ).toBeEnabled();
   await page.getByLabel("ペンの色", { exact: true }).fill("#1234ab");
   await page
     .getByRole("slider", { name: "線の太さ", exact: true })
@@ -221,11 +253,28 @@ test("下絵の入替取消・生成失敗・保存不足でも元の絵を保�
   const before = await records(page),
     drawn = await bitmap(page),
     original = hash(await previewBytes(page, ".tracing-underlay"));
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: "ペン", exact: true }),
+  ).toBeEnabled();
+  await expectCanvasUnchanged(page, drawn);
+  expect(hash(await previewBytes(page, ".tracing-underlay"))).toBe(original);
   await page.getByRole("button", { name: "下絵をなぞる", exact: true }).click();
   page.once("dialog", (dialog) => dialog.dismiss());
   await preset(page, "左横顔").click();
   expect(await records(page)).toEqual(before);
   expect(hash(await previewBytes(page, ".tracing-underlay"))).toBe(original);
+  const brokenAsset = "**/guide-profile-right-*.png";
+  await page.route(brokenAsset, (route) => route.abort());
+  page.once("dialog", (dialog) => dialog.accept());
+  await preset(page, "左横顔").click();
+  await expect(page.getByRole("alert")).toContainText(
+    "用意したあたりを読み込めませんでした",
+  );
+  await expectCanvasUnchanged(page, drawn);
+  expect(hash(await previewBytes(page, ".tracing-underlay"))).toBe(original);
+  expect(await records(page)).toEqual(before);
+  await page.unroute(brokenAsset);
   await page.evaluate(() => {
     const originalBlob = HTMLCanvasElement.prototype.toBlob;
     const originalAdd = IDBObjectStore.prototype.add;
