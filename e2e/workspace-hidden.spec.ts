@@ -18,7 +18,13 @@ import { PNG } from "pngjs";
 
 test.use({ viewport: { width: 360, height: 800 } });
 test.setTimeout(60_000);
-test.beforeEach(async ({ page }) => observeStorageErrors(page));
+test.beforeEach(async ({ page }) => {
+  // Persistent WebKit contexts use project options, so apply this file's
+  // responsive viewport explicitly before loading the drawing screen.
+  await page.setViewportSize({ width: 360, height: 800 });
+  await expect.poll(() => page.evaluate(() => innerWidth)).toBe(360);
+  await observeStorageErrors(page);
+});
 const workspace = (page: Page) =>
   page.getByRole("dialog", { name: "画面いっぱいで描く", exact: true });
 const button = (page: Page, name: string) =>
