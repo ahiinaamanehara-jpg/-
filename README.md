@@ -12,7 +12,7 @@ M12では、描く画面のキャンバスの前に「描くサポート」を�
 
 「画面いっぱいで描く」でも上部に同じ3つのボタンがあります。色・線幅・PNG書き出しは下部の「道具設定」で開きます。設定は同時に1種類だけ表示します。保存形式はDB v5・ZIP v3のままで、新しい移行はありません。公開画面へ反映するには、従来どおり[Publish test site](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/pages.yml)をmainで実行してください。
 
-今回の自動検証の結果は[テスト記録](docs/TEST_PLAN.md)、操作手順は[スマホの確認手順](docs/MOBILE_TEST_GUIDE.md)へ記録します。実機Androidの見つけやすさ・使いやすさは確認待ちです。
+単体170件・全体の画面操作133件と修正後の関連テストが成功しました。[互換性Run #18](https://github.com/ahiinaamanehara-jpg/-/actions/runs/40422122306)でもChromium 31件・Firefox 27件・WebKit 27件、計85件が成功しています。型チェック・lint・本番ビルドも成功しました。詳しくは[テスト記録](docs/TEST_PLAN.md)と[スマホの確認手順](docs/MOBILE_TEST_GUIDE.md)を参照してください。実機Androidの見つけやすさ・使いやすさは確認待ちです。
 
 以下はM11までの経緯です。入口の配置はM12で更新しました。
 
