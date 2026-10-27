@@ -1235,6 +1235,22 @@ dialog.drawing-workspace.is-focused {
   justify-content: space-between;
   gap: 8px;
 }
+.workspace-heading-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+.workspace-heading-meta .workspace-status {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.workspace-controls-toggle {
+  flex: 0 0 auto;
+  font-size: 0.875rem;
+}
 .workspace-heading button {
   padding: 6px 10px;
 }
@@ -1343,6 +1359,53 @@ dialog.drawing-workspace.is-focused {
 }
 .workspace-options-heading h2 {
   margin: 0;
+}
+
+dialog.drawing-workspace.is-uncluttered {
+  grid-template-areas: "stage";
+  grid-template-rows: minmax(0, 1fr);
+  border-radius: 0;
+}
+.is-uncluttered .workspace-heading,
+.is-uncluttered .workspace-heading-meta {
+  display: contents;
+}
+.is-uncluttered .workspace-heading-actions,
+.is-uncluttered .drawing-support-controls,
+.is-uncluttered .workspace-tools {
+  display: none;
+}
+.is-uncluttered .workspace-controls-toggle {
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
+  z-index: 3;
+  max-width: calc(100% - 16px);
+  box-shadow: 0 2px 8px #39352e30;
+}
+.is-uncluttered .canvas-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+}
+.is-uncluttered .canvas-frame:focus-visible {
+  outline-offset: -4px;
+}
+.is-uncluttered .canvas-transform {
+  position: absolute;
+  left: calc(50% - var(--paper-size, 0px) / 2);
+  top: calc(50% - var(--paper-size, 0px) / 2);
+  width: var(--paper-size, 0px);
+  height: var(--paper-size, 0px);
+}
+.is-uncluttered .workspace-feedback {
+  position: absolute;
+  left: calc(env(safe-area-inset-left, 0px) + 8px);
+  right: calc(env(safe-area-inset-right, 0px) + 8px);
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
+  z-index: 3;
+  border-radius: 8px;
 }
 
 .layer-controls {

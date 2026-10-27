@@ -12,6 +12,7 @@ const commonTests = [
   "**/tracing.spec.ts",
   "**/view.spec.ts",
   "**/workspace.spec.ts",
+  "**/workspace-hidden.spec.ts",
   "**/layers.spec.ts",
 ];
 
@@ -34,6 +35,7 @@ export default defineConfig({
         ...commonTests,
         "**/view-touch.spec.ts",
         "**/workspace-touch.spec.ts",
+        "**/workspace-hidden-touch.spec.ts",
         "**/layers-touch.spec.ts",
       ],
       use: {

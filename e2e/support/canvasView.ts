@@ -47,8 +47,18 @@ export async function paperPosition(page: Page, x: number, y: number) {
         new DOMPoint(p.x * width - origin[0], p.y * height - origin[1]),
       );
       return {
-        x: box.left + frame.clientLeft + origin[0] + point.x,
-        y: box.top + frame.clientTop + origin[1] + point.y,
+        x:
+          box.left +
+          frame.clientLeft +
+          (parseFloat(style.left) || 0) +
+          origin[0] +
+          point.x,
+        y:
+          box.top +
+          frame.clientTop +
+          (parseFloat(style.top) || 0) +
+          origin[1] +
+          point.y,
       };
     },
     { x, y },

@@ -46,6 +46,7 @@ export function CanvasViewport({
   controlsTarget?: HTMLElement | null;
 }) {
   const viewport = useRef<HTMLDivElement>(null);
+  const paper = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<CanvasView>({ ...FIT_VIEW });
   const current = useRef<CanvasView>({ ...FIT_VIEW });
   const [panMode, setPanMode] = useState(false);
@@ -65,12 +66,15 @@ export function CanvasViewport({
   };
   const readFrame = (): Frame => {
     const element = viewport.current!,
-      box = element.getBoundingClientRect();
+      box = element.getBoundingClientRect(),
+      style = getComputedStyle(paper.current!);
+    // Rectangular viewports still contain a square paper. Use its untransformed
+    // placement, so drawing and gestures agree with the image at every size.
     return {
-      left: box.left + element.clientLeft,
-      top: box.top + element.clientTop,
-      width: box.width - 2 * element.clientLeft,
-      height: box.height - 2 * element.clientTop,
+      left: box.left + element.clientLeft + (parseFloat(style.left) || 0),
+      top: box.top + element.clientTop + (parseFloat(style.top) || 0),
+      width: parseFloat(style.width),
+      height: parseFloat(style.height),
     };
   };
   const normalized = (point: Point, rect: Frame): Point => ({
@@ -373,6 +377,7 @@ export function CanvasViewport({
         }}
       >
         <div
+          ref={paper}
           className="canvas-transform"
           style={{
             transform: `translate(${view.x * 100}%, ${view.y * 100}%) rotate(${view.rotation}rad) scale(${view.scale})`,

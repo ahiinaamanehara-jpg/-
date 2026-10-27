@@ -8,11 +8,19 @@
 
 ## 現在の状態
 
+M15では、「画面いっぱいで描く」に **「ボタンを隠す」** を追加しました。戻る・保存・サポート・道具を隠すと、描画の表示枠が画面全体へ広がります。拡大した絵を、これまでボタンや正方形の枠で隠れていた上下・左右の範囲でも描けます。
+
+右上の **「ボタンを表示」** またはEscapeで道具へ戻れます。絵・下絵・レイヤー・道具・拡大回転・取り消しは保持し、自動保存も続けます。保存エラーや描くレイヤーが非表示の場合の案内は、隠している間も表示します。保存画像は960×960pxのままです。
+
+単体170件・修正後の関連画面テスト8件、型チェック・lintが成功し、全体回帰と複数ブラウザーを検証中です。[スマホの確認手順](docs/MOBILE_TEST_GUIDE.md)と[テスト記録](docs/TEST_PLAN.md)へ記録します。公開更新は従来どおり[Publish test site](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/pages.yml)をmainで実行してください。
+
+以下はM14までの記録です。
+
 M14追補で、最初の自作のあたりを、**MB-Labのフリー公開されているアニメ調3D素体を元にした2D下絵**へ差し替えました。正面・左右横顔・左右斜めの5種類です。[下絵の一覧・出典・利用条件](docs/GUIDE_ASSETS.md)を確認できます。素材はアプリに同梱し、選択時に外部の配布サイトへ接続しません。
 
 操作は同じ「描くサポート」→「下絵をなぞる」→「用意したあたり」です。保存済み作品ではここから新しい下絵を選び直せます。本人の線・レイヤー・既存の保存は保持します。模写・トレースと作品の公開に使える下絵で、キャラクターや他の参考画像の条件は別に確認します。
 
-差し替え後の関連E2E3件と修正後の関連9件、単体170件・全体回帰138件、型チェック・lint・本番ビルドが成功しました。[互換性Run #22](https://github.com/ahiinaamanehara-jpg/-/actions/runs/40464703267)ではChromium 36件・Firefox 32件が成功し、WebKitの最終結果は確認待ちです。詳細は[テスト記録](docs/TEST_PLAN.md)に記録しました。公開画面は従来どおり[Publish test site](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/pages.yml)をmainで実行して更新します。
+差し替え後の関連E2E3件と修正後の関連9件、単体170件・全体回帰138件、型チェック・lint・本番ビルドが成功しました。[互換性Run #22](https://github.com/ahiinaamanehara-jpg/-/actions/runs/40464703267)も後続でWebKitの終了を確認し、Chromium 36件・Firefox 32件・WebKit 32件、計100件が成功しました。詳細は[テスト記録](docs/TEST_PLAN.md)に記録しました。公開画面は従来どおり[Publish test site](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/pages.yml)をmainで実行して更新します。
 
 以下は初回のM14までの記録です。最初の自作図は上記の素材へ置き換えました。
 

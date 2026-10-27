@@ -619,6 +619,13 @@ function DrawingEditor({ data }: { data: DrawingData }) {
         />
       )}
       <DrawingWorkspace
+        drawingNotice={
+          layers.enabled &&
+          layers.items.find((item) => item.id === layers.activeId)?.visible ===
+            false
+            ? "選択中のレイヤーは非表示です。「ボタンを表示」からレイヤーを表示して描けます。"
+            : undefined
+        }
         blocked={disabled}
         statusText={statusText}
         statusKind={saveState.status}

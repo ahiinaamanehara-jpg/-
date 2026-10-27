@@ -16,6 +16,7 @@ export function DrawingWorkspace({
   layerCount,
   actions,
   feedback,
+  drawingNotice,
 }: {
   blocked: boolean;
   statusText: string;
@@ -30,8 +31,10 @@ export function DrawingWorkspace({
   layerCount: number;
   actions: (focused: boolean) => ReactNode;
   feedback: ReactNode;
+  drawingNotice?: string;
 }) {
   const [focused, setFocused] = useState(false);
+  const [controlsHidden, setControlsHidden] = useState(false);
   const [panel, setPanel] = useState<DrawingPanel>();
   const optionsOpen = panel === "tools";
   const [controlsTarget, setControlsTarget] = useState<HTMLDivElement | null>(
@@ -42,6 +45,7 @@ export function DrawingWorkspace({
   const trigger = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const optionsButton = useRef<HTMLButtonElement>(null);
+  const visibilityButton = useRef<HTMLButtonElement>(null);
   const id = useId();
 
   useEffect(() => {
@@ -143,6 +147,7 @@ export function DrawingWorkspace({
           disabled={blocked}
           onClick={() => {
             setPanel(undefined);
+            setControlsHidden(false);
             setFocused(true);
           }}
         >
@@ -153,14 +158,17 @@ export function DrawingWorkspace({
       <dialog
         ref={dialog}
         open
-        className={`drawing-workspace${focused ? " is-focused" : ""}`}
+        className={`drawing-workspace${focused ? " is-focused" : ""}${focused && controlsHidden ? " is-uncluttered" : ""}`}
         aria-modal={focused ? "true" : "false"}
         aria-label={focused ? "画面いっぱいで描く" : "キャンバスと道具"}
         aria-describedby={focused ? `${id}-help` : undefined}
         onCancel={(event) => {
           event.preventDefault();
           if (panel) closePanel();
-          else if (!blocked) setFocused(false);
+          else if (controlsHidden) {
+            setControlsHidden(false);
+            visibilityButton.current?.focus({ preventScroll: true });
+          } else if (!blocked) setFocused(false);
         }}
         onKeyDown={(event) => {
           // 表示設定はPortalで配置するため、描画枠側でもEscapeを受ける。
@@ -193,13 +201,14 @@ export function DrawingWorkspace({
       >
         {focused && (
           <div className="workspace-heading" data-workspace-scroll>
-            <div className="workspace-heading-actions">
+            <div className="workspace-heading-actions" id={`${id}-actions`}>
               <button
                 ref={closeButton}
                 type="button"
                 disabled={blocked}
                 onClick={() => {
                   setPanel(undefined);
+                  setControlsHidden(false);
                   setFocused(false);
                 }}
               >
@@ -214,15 +223,34 @@ export function DrawingWorkspace({
                 途中で保存
               </button>
             </div>
-            <p className={`workspace-status ${statusKind}`} role="status">
-              {statusKind === "pending"
-                ? "未保存"
-                : statusKind === "scratch"
-                  ? "保存なしの落書き"
-                  : statusText}
-            </p>
+            <div className="workspace-heading-meta">
+              <p
+                className={`workspace-status ${statusKind}${controlsHidden ? " sr-only" : ""}`}
+                role="status"
+              >
+                {statusKind === "pending"
+                  ? "未保存"
+                  : statusKind === "scratch"
+                    ? "保存なしの落書き"
+                    : statusText}
+              </p>
+              <button
+                ref={visibilityButton}
+                type="button"
+                className="workspace-controls-toggle"
+                aria-expanded={!controlsHidden}
+                aria-controls={`${id}-tools ${id}-actions`}
+                onClick={() => {
+                  setPanel(undefined);
+                  setControlsHidden((hidden) => !hidden);
+                  visibilityButton.current?.focus({ preventScroll: true });
+                }}
+              >
+                {controlsHidden ? "ボタンを表示" : "ボタンを隠す"}
+              </button>
+            </div>
             <p id={`${id}-help`} className="sr-only">
-              1本指で描き、2本指で拡大・回転・移動できます。「描くサポート」に下絵・レイヤー・拡大回転のボタンがあります。道具設定から色や線幅、PNG書き出しを選べます。
+              1本指で描き、2本指で拡大・回転・移動できます。「描くサポート」に下絵・レイヤー・拡大回転のボタンがあります。道具設定から色や線幅、PNG書き出しを選べます。「ボタンを隠す」で表示枠を広げ、「ボタンを表示」またはEscapeで道具へ戻れます。
             </p>
           </div>
         )}
@@ -244,6 +272,7 @@ export function DrawingWorkspace({
           {canvas(controlsTarget, focused)}
         </div>
         <fieldset
+          id={`${id}-tools`}
           className="drawing-tools workspace-tools"
           disabled={blocked}
           data-workspace-scroll
@@ -269,6 +298,11 @@ export function DrawingWorkspace({
           )}
         </fieldset>
         <div className="workspace-feedback" data-workspace-scroll>
+          {controlsHidden && drawingNotice && (
+            <p role="status" className="note">
+              {drawingNotice}
+            </p>
+          )}
           {feedback}
         </div>
         {!focused && actions(false)}
