@@ -120,9 +120,19 @@ test("ボタンを隠して画面全体へ描け、線・下絵・レイヤー�
     await page.getByLabel("お絵描きキャンバス").boundingBox(),
   );
   const target = await paperPosition(page, 0.5, 0.2);
+  const geometry = await page.locator(".canvas-transform").evaluate((el) => {
+    const style = getComputedStyle(el);
+    return {
+      bounds: el.getBoundingClientRect().toJSON(),
+      transform: style.transform,
+      origin: style.transformOrigin,
+      width: style.width,
+      height: style.height,
+    };
+  });
   // This part of the enlarged picture was clipped by the previous square frame.
   expect(target.y).toBeLessThan(normal.y - 8);
-  expect(target.y).toBeGreaterThan(60);
+  expect(target.y, JSON.stringify({ target, geometry })).toBeGreaterThan(60);
   await draw(page, 0.2);
   expect(await canvasPixel(page, 480, 192)).toEqual([18, 52, 171, 255]);
   await saved(page);

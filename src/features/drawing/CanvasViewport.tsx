@@ -65,16 +65,21 @@ export function CanvasViewport({
     setView(current.current);
   };
   const readFrame = (): Frame => {
-    const element = viewport.current!,
+    const element = paper.current!,
       box = element.getBoundingClientRect(),
-      style = getComputedStyle(paper.current!);
+      style = getComputedStyle(element),
+      matrix = new DOMMatrix(
+        style.transform === "none" ? undefined : style.transform,
+      ),
+      width = parseFloat(style.width),
+      height = parseFloat(style.height);
     // Rectangular viewports still contain a square paper. Use its untransformed
     // placement, so drawing and gestures agree with the image at every size.
     return {
-      left: box.left + element.clientLeft + (parseFloat(style.left) || 0),
-      top: box.top + element.clientTop + (parseFloat(style.top) || 0),
-      width: parseFloat(style.width),
-      height: parseFloat(style.height),
+      left: box.left + box.width / 2 - matrix.e - width / 2,
+      top: box.top + box.height / 2 - matrix.f - height / 2,
+      width,
+      height,
     };
   };
   const normalized = (point: Point, rect: Frame): Point => ({

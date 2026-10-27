@@ -1388,14 +1388,13 @@ dialog.drawing-workspace.is-uncluttered {
   height: 100%;
   border: 0;
   border-radius: 0;
+  display: grid;
+  place-items: center;
 }
 .is-uncluttered .canvas-frame:focus-visible {
   outline-offset: -4px;
 }
 .is-uncluttered .canvas-transform {
-  position: absolute;
-  left: calc(50% - var(--paper-size, 0px) / 2);
-  top: calc(50% - var(--paper-size, 0px) / 2);
   width: var(--paper-size, 0px);
   height: var(--paper-size, 0px);
 }

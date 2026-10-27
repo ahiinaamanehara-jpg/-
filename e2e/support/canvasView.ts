@@ -38,27 +38,15 @@ export async function paperPosition(page: Page, x: number, y: number) {
   return page.locator(".canvas-transform").evaluate(
     (el, p) => {
       const style = getComputedStyle(el),
-        frame = el.parentElement!,
-        box = frame.getBoundingClientRect();
+        box = el.getBoundingClientRect();
       const width = parseFloat(style.width),
         height = parseFloat(style.height);
-      const origin = style.transformOrigin.split(" ").map(parseFloat);
-      const point = new DOMMatrix(style.transform).transformPoint(
-        new DOMPoint(p.x * width - origin[0], p.y * height - origin[1]),
-      );
+      const matrix = new DOMMatrix(style.transform);
+      const x = (p.x - 0.5) * width,
+        y = (p.y - 0.5) * height;
       return {
-        x:
-          box.left +
-          frame.clientLeft +
-          (parseFloat(style.left) || 0) +
-          origin[0] +
-          point.x,
-        y:
-          box.top +
-          frame.clientTop +
-          (parseFloat(style.top) || 0) +
-          origin[1] +
-          point.y,
+        x: box.left + box.width / 2 + matrix.a * x + matrix.c * y,
+        y: box.top + box.height / 2 + matrix.b * x + matrix.d * y,
       };
     },
     { x, y },
