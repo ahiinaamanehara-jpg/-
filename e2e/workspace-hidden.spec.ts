@@ -22,7 +22,6 @@ test.beforeEach(async ({ page }) => {
   // Persistent WebKit contexts use project options, so apply this file's
   // responsive viewport explicitly before loading the drawing screen.
   await page.setViewportSize({ width: 360, height: 800 });
-  await expect.poll(() => page.evaluate(() => innerWidth)).toBe(360);
   await observeStorageErrors(page);
 });
 const workspace = (page: Page) =>
@@ -34,6 +33,8 @@ async function open(page: Page) {
     .getByRole("button", { name: "画面いっぱいで描く", exact: true })
     .click();
   await expect(workspace(page)).toBeVisible();
+  // Check the layout width after the application's viewport meta is loaded.
+  await expect.poll(() => page.evaluate(() => innerWidth)).toBe(360);
 }
 async function saved(page: Page) {
   await expect(workspace(page).locator(".workspace-status")).toHaveText(
