@@ -842,6 +842,21 @@ textarea {
   flex-wrap: wrap;
   margin: 18px 0;
 }
+.hint-levels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 16px 0 8px;
+}
+.hint-levels button {
+  min-width: 0;
+  font-weight: 650;
+}
+.hint-topic-label > span {
+  display: inline-block;
+  white-space: nowrap;
+}
+.hint-levels button[aria-pressed="true"],
 .hint-tabs button[aria-pressed="true"],
 .reflection-choices button[aria-pressed="true"] {
   background: #805236;
@@ -862,6 +877,26 @@ textarea {
 }
 .hint-tips li + li {
   margin-top: 14px;
+}
+.hint-comparison {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+.hint-comparison > div {
+  padding: 12px;
+  border: 1px solid #d0c3b0;
+  border-radius: 12px;
+  background: #faf6ef;
+  min-width: 0;
+}
+.hint-comparison dt {
+  font-weight: 650;
+}
+.hint-comparison dd {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
 }
 .reflection-form {
   border: 0;

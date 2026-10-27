@@ -7,6 +7,7 @@ const commonTests = [
   "**/compatibility-storage.spec.ts",
   "**/drawing-layout.spec.ts",
   "**/drawing-support.spec.ts",
+  "**/hints.spec.ts",
   "**/tracing.spec.ts",
   "**/view.spec.ts",
   "**/workspace.spec.ts",

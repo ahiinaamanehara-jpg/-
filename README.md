@@ -8,6 +8,14 @@
 
 ## 現在の状態
 
+M13では「描くヒント」を「基礎」「応用」に分けました。基礎は従来の表情・顔の形・簡単なポーズと、新しい模写・トレースの計5項目。応用はレイヤー・拡大回転・模写とトレースの違いと注意点の3項目です。
+
+応用も最初から自由に読めます。レイヤーの選択や書き出し、指の切替や表示リセット、方法の違い、参考画像の利用・公開時の注意を補足しました。ヒントを閉じれば同じ絵・道具・取り消し履歴へ戻れ、一時描画でも利用できます。単体170件とヒント関連の画面操作が成功し、全体回帰・複数ブラウザーを検証しています。詳しくは[テスト記録](docs/TEST_PLAN.md)と[スマホの確認手順](docs/MOBILE_TEST_GUIDE.md)を参照してください。
+
+公開画面の更新は、従来どおり[Publish test site](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/pages.yml)のRun workflowをmainで実行します。ヒントの閲覧に読了条件や外部AIはありません。
+
+以下はM12までの経緯です。
+
 M12では、描く画面のキャンバスの前に「描くサポート」をまとめました。「下絵をなぞる」「レイヤー」「拡大・回転」のアイコン付きボタンから、使いたい設定だけを開けます。下絵の状態やレイヤー枚数も入口に表示します。「閉じる」で設定を閉じられ、絵・下絵・選択先・取り消し履歴はそのままです。
 
 「画面いっぱいで描く」でも上部に同じ3つのボタンがあります。色・線幅・PNG書き出しは下部の「道具設定」で開きます。設定は同時に1種類だけ表示します。保存形式はDB v5・ZIP v3のままで、新しい移行はありません。公開画面へ反映するには、従来どおり[Publish test site](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/pages.yml)をmainで実行してください。
@@ -120,7 +128,7 @@ npm run test:e2e:compat
 
 特定のエンジンだけなら`npm run test:e2e:compat -- --project=firefox`等を指定します。未導入のエンジンは実行に失敗し、成功やスキップとして扱いません。このクラウドではブラウザーの取得先が通信制限の対象です。
 
-[Check browser compatibility](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/compatibility.yml)は、mainのアプリ・E2E・関連設定の変更時にChromium／Firefox／WebKitを別々のジョブで確認します。Actionsから手動実行もできます。共通27件（全体フロー・アクセシビリティ・保存復帰・下絵・道具配置・表示調整・専用画面・レイヤー・サポート入口）と、Chromiumでは追加のタッチ入力4件を実行し、自動再試行で失敗を隠しません。サイトの配信やユーザーの保存データには触れません。
+[Check browser compatibility](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/compatibility.yml)は、mainのアプリ・E2E・関連設定の変更時にChromium／Firefox／WebKitを別々のジョブで確認します。Actionsから手動実行もできます。共通29件（全体フロー・アクセシビリティ・保存復帰・下絵・道具配置・表示調整・専用画面・レイヤー・サポート入口・基礎応用ヒント）と、Chromiumでは追加のタッチ入力4件を実行し、自動再試行で失敗を隠しません。サイトの配信やユーザーの保存データには触れません。
 
 WebKitの共通フローはテスト専用の永続プロファイルで実行します。隔離領域でBlob保存が拒否される場合の絵の保持とPNG退避も検証します。画像比較用のpngjsは開発専用です。
 
