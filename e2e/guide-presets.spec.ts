@@ -251,13 +251,16 @@ test("旧下絵の入替取消・読込失敗・生成失敗・保存不足で�
   await paintLine(page);
   await save(page);
   const before = await records(page),
-    drawn = await bitmap(page),
+    initialDrawing = await bitmap(page),
     original = hash(await previewBytes(page, ".tracing-underlay"));
   await page.reload();
   await expect(
     page.getByRole("button", { name: "ペン", exact: true }),
   ).toBeEnabled();
-  await expectCanvasUnchanged(page, drawn);
+  await expectCanvasUnchanged(page, initialDrawing);
+  // Compare each PNG decode to the bitmap immediately before that round trip;
+  // browsers can round translucent edge colours on every PNG encode/decode.
+  const drawn = await bitmap(page);
   expect(hash(await previewBytes(page, ".tracing-underlay"))).toBe(original);
   await page.getByRole("button", { name: "下絵をなぞる", exact: true }).click();
   page.once("dialog", (dialog) => dialog.dismiss());
@@ -437,10 +440,19 @@ test("下絵はPNGに混ぜずZIPで残し、専用画面・文字200%と顔や�
   );
   expect(hash(files[asset.file])).toBe(guide);
   await page.reload();
-  await page.goto(`#/draw/${work.id}`);
+  // Finish mounting the app before starting a second fragment navigation.
   await expect(
-    page.getByRole("button", { name: "ペン", exact: true }),
+    page.getByRole("button", { name: "全データをバックアップ", exact: true }),
   ).toBeEnabled();
+  await page.goto(`#/draw/${work.id}`);
+  await expect(page.getByRole("button", { name: "ペン", exact: true }))
+    .toBeEnabled()
+    .catch(async (error: unknown) => {
+      throw new Error(
+        `${String(error)}\n再開時の画面：${await page.locator("main").innerText()}`,
+        { cause: error },
+      );
+    });
   await expectCanvasUnchanged(page, blank);
   await expect(page.locator(".tracing-underlay")).toHaveCount(0);
   await page.getByRole("button", { name: "下絵をなぞる", exact: true }).click();

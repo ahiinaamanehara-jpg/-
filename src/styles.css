@@ -760,6 +760,10 @@ textarea {
   background: #fff;
   border-radius: 8px;
 }
+.guide-preset-credit a {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
 .tracing-opacity {
   display: flex;
   flex-direction: column;
