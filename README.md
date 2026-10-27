@@ -12,7 +12,7 @@ M15では、「画面いっぱいで描く」に **「ボタンを隠す」** �
 
 右上の **「ボタンを表示」** またはEscapeで道具へ戻れます。絵・下絵・レイヤー・道具・拡大回転・取り消しは保持し、自動保存も続けます。保存エラーや描くレイヤーが非表示の場合の案内は、隠している間も表示します。保存画像は960×960pxのままです。
 
-単体170件・座標調整後の関連12件・全体回帰142件、型チェック・lint・本番ビルドが成功しました。[互換性Run #24](https://github.com/ahiinaamanehara-jpg/-/actions/runs/40474483442)ではChromium 40件・Firefox 35件が成功し、WebKitは実行中で最終結果を未確認としています。[スマホの確認手順](docs/MOBILE_TEST_GUIDE.md)と[テスト記録](docs/TEST_PLAN.md)に記録しました。公開更新は従来どおり[Publish test site](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/pages.yml)をmainで実行してください。
+単体170件・座標調整後の関連12件・全体回帰142件、画面サイズを明示した共通3件、型チェック・lint・本番ビルドが成功しました。[互換性Run #26](https://github.com/ahiinaamanehara-jpg/-/actions/runs/40477683069)もChromium 40件・Firefox 35件・WebKit 35件、計110件が成功しました。[スマホの確認手順](docs/MOBILE_TEST_GUIDE.md)と[テスト記録](docs/TEST_PLAN.md)に記録しました。実機での押しやすさは確認待ちです。公開更新は従来どおり[Publish test site](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/pages.yml)をmainで実行してください。
 
 以下はM14までの記録です。
 
