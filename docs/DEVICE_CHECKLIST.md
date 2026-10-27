@@ -25,7 +25,7 @@ M7の自動検証と実機受け入れを分ける。ユーザーからM2〜M6�
 | iPhone・Safari | 個別の機種・版・結果は未記録 | 一連の操作・キーボード・書き出し・読み上げ |
 | Androidスマートフォン | 保存調整後の基本確認報告あり。今回の道具配置についても「スマホで使う分には押しやすいかな」との報告を受領。機種・OS・ブラウザー・機能別詳細は未記録 | 実際に使うブラウザーの版、キーボード・OS保存先・読み上げ等の個別結果 |
 | 利用者のPC環境（OS・安定版ブラウザー） | OS・版別の実操作は未記録 | Windows／Mac、実Safari・Edge、OSの画像保存・キーボード |
-| PlaywrightのChromium／Firefox／WebKit | M14の1ec9f4b、[GitHubのRun #20](https://github.com/ahiinaamanehara-jpg/-/actions/runs/40452396912)でChromium 36件・Firefox 32件・WebKit 32件、計100件成功 | 5方向のあたりの実画素・選択・保存再開・PNG／ZIP・入替取消・生成失敗・保存不足の保護と再試行、通常／専用画面・文字200%・ヒントを検証。従来のサポート・レイヤー・表示変換・保存保護も含む。WebKitの通常フローは永続プロファイル。OS別ブラウザーの手動操作や実機とは区別 |
+| PlaywrightのChromium／Firefox／WebKit | M14追補の9dab6f4、[GitHubのRun #22](https://github.com/ahiinaamanehara-jpg/-/actions/runs/40464703267)でChromium 36件・Firefox 32件成功。WebKitは実行中で最終結果未確認 | 新しい素材の5方向の画素・選択・保存再開・PNG／ZIP・旧下絵保持・入替取消・読込／生成失敗・保存不足の保護と再試行、通常／専用画面・文字200%・ヒントを検証。初回Run #21の失敗・修正をテスト記録へ記載。WebKitの通常フローは永続プロファイル。OS別ブラウザーの手動操作や実機とは区別 |
 
 共通3エンジンの自動検証は上記のGitHubのCIで完了した。M7の必須実機項目と実Safari・Edge等は確認待ちであり、M7全体の完了・一般公開向けの品質承認は保留する。未解決のデータ消失がないことを自動検証しつつ、端末固有の未確認事項を残す。
 

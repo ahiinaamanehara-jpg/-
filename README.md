@@ -12,7 +12,7 @@ M14追補で、最初の自作のあたりを、**MB-Labのフリー公開され
 
 操作は同じ「描くサポート」→「下絵をなぞる」→「用意したあたり」です。保存済み作品ではここから新しい下絵を選び直せます。本人の線・レイヤー・既存の保存は保持します。模写・トレースと作品の公開に使える下絵で、キャラクターや他の参考画像の条件は別に確認します。
 
-差し替え後の関連E2E3件、単体170件、型チェック・lintが成功し、全体回帰と3ブラウザーを検証中です。結果は[テスト記録](docs/TEST_PLAN.md)へ追記します。公開画面は従来どおり[Publish test site](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/pages.yml)をmainで実行して更新します。
+差し替え後の関連E2E3件と修正後の関連9件、単体170件・全体回帰138件、型チェック・lint・本番ビルドが成功しました。[互換性Run #22](https://github.com/ahiinaamanehara-jpg/-/actions/runs/40464703267)ではChromium 36件・Firefox 32件が成功し、WebKitの最終結果は確認待ちです。詳細は[テスト記録](docs/TEST_PLAN.md)に記録しました。公開画面は従来どおり[Publish test site](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/pages.yml)をmainで実行して更新します。
 
 以下は初回のM14までの記録です。最初の自作図は上記の素材へ置き換えました。
 
