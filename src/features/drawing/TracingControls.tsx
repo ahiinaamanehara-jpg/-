@@ -1,6 +1,8 @@
 import type { ChangeEvent } from "react";
 import type { GuideAsset } from "../../data/database";
 import type { TracingSettings } from "../../drawing/tracing";
+import type { GuidePresetId } from "../../drawing/guidePresets";
+import { GuidePresetPicker } from "./GuidePresetPicker";
 
 export function TracingControls({
   settings,
@@ -9,6 +11,7 @@ export function TracingControls({
   disabled,
   onFile,
   onReference,
+  onPreset,
   onSettings,
   onRemove,
 }: {
@@ -18,6 +21,7 @@ export function TracingControls({
   disabled: boolean;
   onFile: (event: ChangeEvent<HTMLInputElement>) => void;
   onReference: () => void;
+  onPreset: (id: GuidePresetId) => void;
   onSettings: (settings: TracingSettings) => void;
   onRemove: () => void;
 }) {
@@ -46,6 +50,8 @@ export function TracingControls({
       </p>
       <fieldset disabled={disabled}>
         <legend className="sr-only">なぞり描きの設定</legend>
+        <GuidePresetPicker disabled={disabled} onChoose={onPreset} />
+        <h3 className="tracing-source-title">自分の画像を使う</h3>
         {hasReference && (
           <button type="button" onClick={onReference}>
             推しの参考画像を下絵にする

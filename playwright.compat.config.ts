@@ -8,6 +8,7 @@ const commonTests = [
   "**/drawing-layout.spec.ts",
   "**/drawing-support.spec.ts",
   "**/hints.spec.ts",
+  "**/guide-presets.spec.ts",
   "**/tracing.spec.ts",
   "**/view.spec.ts",
   "**/workspace.spec.ts",

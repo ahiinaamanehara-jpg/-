@@ -23,6 +23,10 @@ import {
 } from "../../drawing/tracing";
 import { BlobImage } from "../../components/BlobImage";
 import { TracingControls } from "./TracingControls";
+import {
+  prepareGuidePreset,
+  type PresetGuideSource,
+} from "../../drawing/guidePresets";
 import { CanvasViewport } from "./CanvasViewport";
 import { DrawingWorkspace } from "./DrawingWorkspace";
 import { LayerControls } from "./LayerControls";
@@ -403,7 +407,9 @@ function DrawingEditor({ data }: { data: DrawingData }) {
       setGuideWarning("");
     }
   };
-  const chooseGuide = async (source: File | ReferenceAsset) => {
+  const chooseGuide = async (
+    source: File | ReferenceAsset | PresetGuideSource,
+  ) => {
     const controller = session.current;
     if (!controller || importingRef.current) return;
     if (
@@ -417,7 +423,11 @@ function DrawingEditor({ data }: { data: DrawingData }) {
     setActionError("");
     try {
       const image =
-        source instanceof File ? await prepareReferenceImage(source) : source;
+        "presetId" in source
+          ? await prepareGuidePreset(source.presetId)
+          : source instanceof File
+            ? await prepareReferenceImage(source)
+            : source;
       const asset = await makeGuideAsset(image);
       const settings = {
         assetId: asset.id,
@@ -624,7 +634,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
             ? tracing.visible && guide
               ? "下絵を表示中"
               : "下絵は非表示"
-            : "画像を選べます"
+            : "あたり・画像"
         }
         layerCount={layers.items.length}
         tracing={
@@ -640,6 +650,9 @@ function DrawingEditor({ data }: { data: DrawingData }) {
             }}
             onReference={() => {
               if (data.reference) void chooseGuide(data.reference);
+            }}
+            onPreset={(presetId) => {
+              void chooseGuide({ presetId });
             }}
             onSettings={changeTracing}
             onRemove={() => {

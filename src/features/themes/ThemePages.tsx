@@ -18,6 +18,12 @@ import {
 import { registerNavigationGuard } from "../../navigation";
 import { prepareReferenceImage, type PreparedImage } from "../../data/images";
 import { BlobImage } from "../../components/BlobImage";
+import { GuidePresetPicker } from "../drawing/GuidePresetPicker";
+import {
+  getGuidePreset,
+  prepareGuidePreset,
+  type PresetGuideSource,
+} from "../../drawing/guidePresets";
 
 function describeError(error: unknown) {
   if (error instanceof DOMException && error.name === "QuotaExceededError")
@@ -122,7 +128,7 @@ export function ThemePage() {
     }
     if (mode === "trace" && !guide) {
       setError(
-        "下絵にする画像を選んでください。画像なしなら「白紙から描く」で進めます。",
+        "用意したあたりを使うか、下絵にする画像を選んでください。使わないときは「白紙から描く」で進めます。",
       );
       return;
     }
@@ -148,7 +154,9 @@ export function ThemePage() {
       );
     }
   };
-  const prepareGuide = async (source: File | "reference") => {
+  const prepareGuide = async (
+    source: File | "reference" | PresetGuideSource,
+  ) => {
     if (saving.current || !ready) return;
     saving.current = true;
     setPreparing(true);
@@ -162,10 +170,14 @@ export function ThemePage() {
           );
         setGuide(record.asset);
         setGuideName(`${record.character.name}の参考画像`);
-      } else {
+      } else if (source instanceof File) {
         const image = await prepareReferenceImage(source);
         setGuide(image);
         setGuideName(source.name);
+      } else {
+        const image = await prepareGuidePreset(source.presetId);
+        setGuide(image);
+        setGuideName(`${getGuidePreset(source.presetId).label}のあたり`);
       }
     } catch (error) {
       setError(
@@ -252,6 +264,13 @@ export function ThemePage() {
             </div>
             {mode === "trace" && (
               <div className="tracing-setup">
+                <GuidePresetPicker
+                  disabled={!ready || busy || preparing}
+                  onChoose={(presetId) => {
+                    void prepareGuide({ presetId });
+                  }}
+                />
+                <h3 className="tracing-source-title">自分の画像を使う</h3>
                 <p>
                   画像を薄く表示し、目印をなぞって自分で線を描きます。顔や好きな部分だけでも、途中でやめても大丈夫です。
                 </p>
