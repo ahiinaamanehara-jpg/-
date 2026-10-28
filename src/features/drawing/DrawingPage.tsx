@@ -8,6 +8,7 @@ import {
   type SetStateAction,
 } from "react";
 import { loadDraft, markDraftOpened } from "../../data/drafts";
+import { SQUARE_CANVAS } from "../../drawing/dimensions";
 import {
   loadCharacter,
   type Character,
@@ -39,6 +40,8 @@ import {
   rememberImport,
   importToBundle,
   exportWhitePNG,
+  UNDO_BYTES,
+  UNDO_LIMIT,
 } from "../../drawing/surface";
 import { DEFAULT_TOOLS, type DrawingTools } from "../../drawing/tools";
 import {
@@ -166,6 +169,7 @@ export function DrawingPage({
 }
 
 function DrawingEditor({ data }: { data: DrawingData }) {
+  const size = data.draft ?? SQUARE_CANVAS;
   const canvas = useRef<HTMLCanvasElement>(null);
   const session = useRef<DrawingSession>(undefined);
   const pointer = useRef<number | undefined>(undefined);
@@ -497,7 +501,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
     setActionError("");
     try {
       const image = await prepareReferenceImage(file);
-      const bundle = await importToBundle(image.blob);
+      const bundle = await importToBundle(image.blob, size);
       if (controller.dirty && !(await controller.flush()))
         throw new Error(
           "今の絵を保存できなかったため、画像の取り込みを止めました。PNGを書き出すか、保存を再試行してください。",
@@ -577,6 +581,9 @@ function DrawingEditor({ data }: { data: DrawingData }) {
           <p className="drawing-theme">
             {data.draft?.theme || "テーマはまだ決めていません"}
           </p>
+          <p className="note">
+            キャンバス：{size.width} × {size.height}px
+          </p>
         </div>
         <p
           className={`save-status ${saveState.status}`}
@@ -619,6 +626,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
         />
       )}
       <DrawingWorkspace
+        size={size}
         drawingNotice={
           layers.enabled &&
           layers.items.find((item) => item.id === layers.activeId)?.visible ===
@@ -672,6 +680,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
         }
         canvas={(controlsTarget, focused) => (
           <CanvasViewport
+            size={size}
             controlsTarget={controlsTarget}
             blocked={viewBlocked}
             tracingVisible={Boolean(guide && tracing?.visible)}
@@ -694,8 +703,8 @@ function DrawingEditor({ data }: { data: DrawingData }) {
             )}
             <canvas
               ref={canvas}
-              width={960}
-              height={960}
+              width={size.width}
+              height={size.height}
               aria-label="お絵描きキャンバス"
               aria-describedby={
                 focused ? "canvas-view-help" : "canvas-help canvas-view-help"
@@ -943,7 +952,7 @@ function DrawingEditor({ data }: { data: DrawingData }) {
       <details className="drawing-import">
         <summary>紙や他のアプリの絵を取り込む</summary>
         <p>
-          元の作品を残して、別の作品として開きます。PNG・JPEG・WebP、10MiB・1,600万画素まで。正方形の枠内に比率を保って収めます。
+          元の作品を残して、同じサイズの別作品として開きます。PNG・JPEG・WebP、10MiB・1,600万画素まで。キャンバスの枠内に比率を保って収めます。
         </p>
         <label htmlFor="drawing-import-file">作品画像を選ぶ</label>
         <input
@@ -958,7 +967,12 @@ function DrawingEditor({ data }: { data: DrawingData }) {
         )}
       </details>
       <p className="note">
-        取り消しはこの画面での直前の操作に対応します（描画は最大9操作、レイヤー操作と共通）。再開時に履歴は戻りません。白紙や途中の絵も保存できます。
+        取り消しはこの画面での直前の操作に対応します（描画は最大
+        {Math.min(
+          UNDO_LIMIT,
+          Math.floor(UNDO_BYTES / (size.width * size.height * 4)),
+        )}
+        操作、レイヤー操作と共通）。再開時に履歴は戻りません。白紙や途中の絵も保存できます。
       </p>
       <a className="button" href="#/new">
         別のテーマで準備する

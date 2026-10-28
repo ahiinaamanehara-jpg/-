@@ -20,7 +20,8 @@ export function ArtworkExport({ artwork }: { artwork: ArtworkDraft }) {
     setBusy(true);
     setError("");
     const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = 960;
+    canvas.width = artwork.width;
+    canvas.height = artwork.height;
     let surface: DrawingSurface | undefined;
     try {
       surface = new DrawingSurface(canvas);

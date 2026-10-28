@@ -4,7 +4,13 @@ import {
   getSelectedCharacterId,
   loadCharacter,
   type Character,
+  type ReferenceAsset,
 } from "../../data/characters";
+import {
+  CANVAS_PRESETS,
+  canvasForImage,
+  type CanvasPresetId,
+} from "../../drawing/dimensions";
 import {
   createDraft,
   getLastDraft,
@@ -48,6 +54,29 @@ export function ThemePage() {
   const [mode, setMode] = useState<"blank" | "trace">("blank");
   const [guide, setGuide] = useState<PreparedImage>();
   const [guideName, setGuideName] = useState("");
+  const [sizeChoice, setSizeChoice] = useState<CanvasPresetId | "reference">();
+  const [referenceState, setReferenceState] = useState<{
+    id: string;
+    assetId: string;
+    image?: ReferenceAsset;
+    warning?: string;
+  }>();
+  const referenceAssetId = characters.find(
+    (c) => c.id === characterId,
+  )?.referenceAssetId;
+  const referenceReady =
+    referenceState?.id === characterId &&
+    referenceState.assetId === referenceAssetId;
+  const referenceImage = referenceReady ? referenceState.image : undefined;
+  const loadingReference = Boolean(referenceAssetId && !referenceReady);
+  const selectedSize =
+    sizeChoice === "reference" && !referenceImage
+      ? "square"
+      : (sizeChoice ?? (referenceImage ? "reference" : "square"));
+  const canvasSize =
+    selectedSize === "reference"
+      ? canvasForImage(referenceImage!)
+      : CANVAS_PRESETS.find((item) => item.id === selectedSize)!;
   const [preparing, setPreparing] = useState(false);
   const [themeCategory, setThemeCategory] = useState<ThemeCategory | null>(
     null,
@@ -62,7 +91,36 @@ export function ThemePage() {
     theme !== "" ||
     characterId !== initialCharacterId ||
     mode === "trace" ||
+    sizeChoice !== undefined ||
     Boolean(guide);
+  useEffect(() => {
+    if (!characterId || !referenceAssetId) return;
+    let active = true;
+    loadCharacter(characterId)
+      .then((record) => {
+        if (active)
+          setReferenceState({
+            id: characterId,
+            assetId: referenceAssetId,
+            image: record?.asset,
+            warning: record?.asset
+              ? undefined
+              : "参考画像のサイズを読み込めません。正方形・縦長・横長を選んで進めます。",
+          });
+      })
+      .catch(() => {
+        if (active)
+          setReferenceState({
+            id: characterId,
+            assetId: referenceAssetId,
+            warning:
+              "参考画像を読み込めません。正方形・縦長・横長を選んで進めます。",
+          });
+      });
+    return () => {
+      active = false;
+    };
+  }, [characterId, referenceAssetId]);
   useEffect(() => {
     let active = true;
     let sequence = 0;
@@ -121,7 +179,7 @@ export function ThemePage() {
     setRound(0);
   };
   const save = async (skip = false) => {
-    if (saving.current || !ready) return;
+    if (saving.current || !ready || loadingReference) return;
     if (!skip && theme.length > 500) {
       setError("テーマは500文字以内で入力してください。");
       return;
@@ -141,6 +199,7 @@ export function ThemePage() {
           characterId: characterId || undefined,
           theme: skip ? "" : theme,
           themeCategory: skip || !theme.trim() ? null : themeCategory,
+          canvasSize: { width: canvasSize.width, height: canvasSize.height },
         },
         mode === "trace" ? guide : undefined,
       );
@@ -213,14 +272,17 @@ export function ThemePage() {
         <p role="status">推しのノートを読み込んでいます…</p>
       )}
       <form onSubmit={submit}>
-        <fieldset disabled={!ready || busy || preparing}>
+        <fieldset disabled={!ready || busy || preparing || loadingReference}>
           <legend className="sr-only">今回の創作テーマ</legend>
           <div className="field">
             <label htmlFor="theme-character">描くキャラクター</label>
             <select
               id="theme-character"
               value={characterId}
-              onChange={(event) => setCharacterId(event.target.value)}
+              onChange={(event) => {
+                setCharacterId(event.target.value);
+                setSizeChoice(undefined);
+              }}
             >
               <option value="">推しを選ばずに描く</option>
               {missingSelection && (
@@ -240,6 +302,37 @@ export function ThemePage() {
               選んだ推しは別の画面で削除された可能性があります。選び直すか、推しを選ばずに進めます。入力したテーマは残っています。
             </p>
           )}
+          <div className="field canvas-size-picker">
+            <label htmlFor="canvas-size">キャンバスの形</label>
+            <select
+              id="canvas-size"
+              value={selectedSize}
+              onChange={(event) => {
+                setSizeChoice(event.target.value as typeof sizeChoice);
+              }}
+              aria-describedby="canvas-size-help canvas-size-result"
+            >
+              {referenceImage && (
+                <option value="reference">推しの参考画像に合わせる</option>
+              )}
+              {CANVAS_PRESETS.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            <p id="canvas-size-result" role="status" className="note">
+              {loadingReference
+                ? "参考画像のサイズを読み込んでいます…"
+                : `${canvasSize.width} × ${canvasSize.height}px`}
+            </p>
+            <p id="canvas-size-help" className="note">
+              参考画像があれば同じ比率から始めます。画像に合わせる場合も長辺は960pxです。形は描き始める前に選びます。保存済みの作品は変わりません。
+            </p>
+            {referenceReady && referenceState.warning && (
+              <p className="note">{referenceState.warning}</p>
+            )}
+          </div>
           <fieldset className="start-method">
             <legend>描きはじめ方</legend>
             <div className="start-options">

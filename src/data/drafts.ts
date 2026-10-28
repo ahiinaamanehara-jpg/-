@@ -8,6 +8,11 @@ import {
 import { makeGuideAsset } from "./tracing";
 import type { PreparedImage } from "./images";
 import { DEFAULT_TRACING_OPACITY } from "../drawing/tracing";
+import {
+  isCanvasDimensions,
+  SQUARE_CANVAS,
+  type CanvasDimensions,
+} from "../drawing/dimensions";
 export type { ArtworkDraft, ThemeCategory } from "./database";
 
 const LAST_ARTWORK_KEY = "lastArtworkId";
@@ -29,6 +34,7 @@ export interface CreateDraftInput {
   characterId?: string;
   theme: string;
   themeCategory: ThemeCategory | null;
+  canvasSize?: CanvasDimensions;
 }
 
 export async function createDraft(
@@ -48,6 +54,9 @@ export async function createDraft(
     throw new DraftValidationError("推しを選び直してください。");
   }
   const guide = guideImage ? await makeGuideAsset(guideImage) : undefined;
+  const size = input.canvasSize ?? SQUARE_CANVAS;
+  if (!isCanvasDimensions(size))
+    throw new DraftValidationError("キャンバスの形を選び直してください。");
   const db = await openWorkshopDB();
   try {
     const tx = db.transaction(
@@ -79,8 +88,8 @@ export async function createDraft(
         theme: input.theme.trim(),
         themeCategory: input.themeCategory,
         status: "in-progress",
-        width: 960,
-        height: 960,
+        width: size.width,
+        height: size.height,
         createdAt: now,
         updatedAt: now,
         revision: 1,

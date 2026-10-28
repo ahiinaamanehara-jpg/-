@@ -67,7 +67,7 @@ export async function loadArtworkImage(
         kind === "canvas" ? work.canvasAssetId : work.thumbnailAssetId;
       if (!assetId) return undefined;
       const asset = await tx.objectStore("assets").get(assetId);
-      validateStoredImage(asset, assetId, kind);
+      validateStoredImage(asset, assetId, kind, work);
       return asset.blob;
     })();
     const [blob] = await Promise.all([operation, tx.done]);

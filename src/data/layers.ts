@@ -7,6 +7,11 @@ import {
 } from "./database";
 import { inspectImageDimensions } from "./images";
 import {
+  SQUARE_CANVAS,
+  sameDimensions,
+  type CanvasDimensions,
+} from "../drawing/dimensions";
+import {
   isLayerStack,
   type BitmapLayer,
   type LayerStack,
@@ -16,6 +21,7 @@ import {
 export function validateLayerAsset(
   asset: StoredAsset | undefined,
   id: string,
+  size: CanvasDimensions = SQUARE_CANVAS,
 ): asserts asset is LayerAsset {
   if (
     !asset ||
@@ -27,12 +33,14 @@ export function validateLayerAsset(
     !asset.size ||
     asset.size > 10 * 1024 * 1024 ||
     asset.blob.size !== asset.size ||
-    asset.width !== 960 ||
-    asset.height !== 960
+    !sameDimensions(asset, size)
   )
     throw new StorageSchemaError();
 }
-export async function validateLayerBitmaps(layers: LayerStack<BitmapLayer>) {
+export async function validateLayerBitmaps(
+  layers: LayerStack<BitmapLayer>,
+  size: CanvasDimensions = SQUARE_CANVAS,
+) {
   if (!isLayerStack(layers)) throw new StorageSchemaError();
   for (const item of layers.items) {
     if (
@@ -46,8 +54,7 @@ export async function validateLayerBitmaps(layers: LayerStack<BitmapLayer>) {
       await item.bitmap.arrayBuffer(),
       "image/png",
     );
-    if (dimensions.width !== 960 || dimensions.height !== 960)
-      throw new StorageSchemaError();
+    if (!sameDimensions(dimensions, size)) throw new StorageSchemaError();
   }
 }
 export async function loadDrawingLayers(
@@ -59,7 +66,7 @@ export async function loadDrawingLayers(
     const items: BitmapLayer[] = [];
     for (const layer of draft.layers.items) {
       const asset = await db.get("assets", layer.assetId);
-      validateLayerAsset(asset, layer.assetId);
+      validateLayerAsset(asset, layer.assetId, draft);
       // 保存済みBlobの参照を編集・複製先と共有しない。
       const bitmap = new Blob([await asset.blob.arrayBuffer()], {
         type: "image/png",
@@ -69,13 +76,16 @@ export async function loadDrawingLayers(
       items.push({ ...info, bitmap });
     }
     const result = { activeId: draft.layers.activeId, items };
-    await validateLayerBitmaps(result);
+    await validateLayerBitmaps(result, draft);
     return result;
   } finally {
     db.close();
   }
 }
-export function makeLayerAssets(layers?: LayerStack<BitmapLayer> | null): {
+export function makeLayerAssets(
+  layers?: LayerStack<BitmapLayer> | null,
+  size: CanvasDimensions = SQUARE_CANVAS,
+): {
   state?: LayerStack<StoredLayer>;
   assets: LayerAsset[];
 } {
@@ -88,8 +98,8 @@ export function makeLayerAssets(layers?: LayerStack<BitmapLayer> | null): {
       blob: bitmap,
       mime: "image/png",
       size: bitmap.size,
-      width: 960,
-      height: 960,
+      width: size.width,
+      height: size.height,
     };
     assets.push(asset);
     return { ...info, assetId: asset.id };

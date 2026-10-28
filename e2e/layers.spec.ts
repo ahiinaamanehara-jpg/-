@@ -202,7 +202,7 @@ test("最大5枚を保存再開し、PNGは表示分だけ、ZIPは非表示も�
   const bytes = await readFile((await (await zipDownload).path())!);
   const archive = unzipSync(bytes),
     manifest = JSON.parse(new TextDecoder().decode(archive["manifest.json"]));
-  expect(manifest.version).toBe(3);
+  expect(manifest.version).toBe(4);
   expect(manifest.artworks[0].layers.items).toHaveLength(5);
   await page
     .getByLabel("バックアップZIPを選ぶ", { exact: true })
@@ -447,99 +447,102 @@ test("5枚でも小画面・文字200%・専用画面で操作でき、壊れた
   expect(await (await download).path()).toBeTruthy();
 });
 
-test("v4の既存作品と画像を保持してv5へ更新し、旧版からの書込接続を防ぐ", async ({
-  page,
-}) => {
-  await startDrawing(page);
-  await color(page, "#dd2211");
-  await paintLine(page);
-  await save(page);
-  const before = await stored(page),
-    image = await bitmap(page);
-  await page.evaluate(async () => {
-    const state = await new Promise<Record<string, unknown[]>>(
-      (resolve, reject) => {
-        const r = indexedDB.open("suki-sketch");
+for (const legacyVersion of [4, 5]) {
+  test(`v${legacyVersion}の既存作品と画像を保持してv6へ更新し、旧版からの書込接続を防ぐ`, async ({
+    page,
+  }) => {
+    await startDrawing(page);
+    await color(page, "#dd2211");
+    await paintLine(page);
+    await save(page);
+    const before = await stored(page),
+      image = await bitmap(page);
+    await page.evaluate(async (legacyVersion) => {
+      const state = await new Promise<Record<string, unknown[]>>(
+        (resolve, reject) => {
+          const r = indexedDB.open("suki-sketch");
+          r.onsuccess = () => {
+            const db = r.result,
+              names = Array.from(db.objectStoreNames),
+              tx = db.transaction(names),
+              result: Record<string, unknown[]> = {};
+            for (const name of names) {
+              const get = tx.objectStore(name).getAll();
+              get.onsuccess = () => {
+                result[name] = get.result;
+              };
+            }
+            tx.oncomplete = () => {
+              db.close();
+              resolve(result);
+            };
+            tx.onabort = () => reject(tx.error);
+          };
+          r.onerror = () => reject(r.error);
+        },
+      );
+      for (const raw of state.assets) {
+        const asset = raw as { blob: Blob };
+        asset.blob = new Blob([await asset.blob.arrayBuffer()], {
+          type: "image/png",
+        });
+      }
+      await new Promise<void>((resolve, reject) => {
+        const r = indexedDB.deleteDatabase("suki-sketch");
+        r.onsuccess = () => resolve();
+        r.onerror = () => reject(r.error);
+      });
+      await new Promise<void>((resolve, reject) => {
+        const r = indexedDB.open("suki-sketch", legacyVersion);
+        r.onupgradeneeded = () => {
+          const db = r.result;
+          for (const name of Object.keys(state))
+            db.createObjectStore(name, {
+              keyPath: name === "settings" ? "key" : "id",
+            });
+          const refs = r.transaction!.objectStore("reflections");
+          refs.createIndex("by-artwork", "artworkId");
+          refs.createIndex("by-question", ["artworkId", "questionId"], {
+            unique: true,
+          });
+        };
         r.onsuccess = () => {
           const db = r.result,
-            names = Array.from(db.objectStoreNames),
-            tx = db.transaction(names),
-            result: Record<string, unknown[]> = {};
-          for (const name of names) {
-            const get = tx.objectStore(name).getAll();
-            get.onsuccess = () => {
-              result[name] = get.result;
-            };
-          }
+            tx = db.transaction(Object.keys(state), "readwrite");
+          for (const [name, rows] of Object.entries(state))
+            for (const row of rows) tx.objectStore(name).add(row);
           tx.oncomplete = () => {
             db.close();
-            resolve(result);
+            resolve();
           };
           tx.onabort = () => reject(tx.error);
         };
         r.onerror = () => reject(r.error);
-      },
-    );
-    for (const raw of state.assets) {
-      const asset = raw as { blob: Blob };
-      asset.blob = new Blob([await asset.blob.arrayBuffer()], {
-        type: "image/png",
       });
-    }
-    await new Promise<void>((resolve, reject) => {
-      const r = indexedDB.deleteDatabase("suki-sketch");
-      r.onsuccess = () => resolve();
-      r.onerror = () => reject(r.error);
-    });
-    await new Promise<void>((resolve, reject) => {
-      const r = indexedDB.open("suki-sketch", 4);
-      r.onupgradeneeded = () => {
-        const db = r.result;
-        for (const name of Object.keys(state))
-          db.createObjectStore(name, {
-            keyPath: name === "settings" ? "key" : "id",
-          });
-        const refs = r.transaction!.objectStore("reflections");
-        refs.createIndex("by-artwork", "artworkId");
-        refs.createIndex("by-question", ["artworkId", "questionId"], {
-          unique: true,
-        });
-      };
-      r.onsuccess = () => {
-        const db = r.result,
-          tx = db.transaction(Object.keys(state), "readwrite");
-        for (const [name, rows] of Object.entries(state))
-          for (const row of rows) tx.objectStore(name).add(row);
-        tx.oncomplete = () => {
-          db.close();
-          resolve();
-        };
-        tx.onabort = () => reject(tx.error);
-      };
-      r.onerror = () => reject(r.error);
-    });
+    }, legacyVersion);
+    expect((await stored(page)).version).toBe(legacyVersion);
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: "ペン", exact: true }),
+    ).toBeEnabled();
+    await expectCanvasUnchanged(page, image);
+    const after = await stored(page);
+    expect(after.version).toBe(6);
+    expect(after.assets).toEqual(before.assets);
+    expect(after.artworks).toEqual(before.artworks);
+    expect(
+      await page.evaluate(
+        (legacyVersion) =>
+          new Promise((resolve) => {
+            const r = indexedDB.open("suki-sketch", legacyVersion);
+            r.onerror = () => resolve(r.error?.name);
+            r.onsuccess = () => {
+              r.result.close();
+              resolve("unexpected");
+            };
+          }),
+        legacyVersion,
+      ),
+    ).toBe("VersionError");
   });
-  expect((await stored(page)).version).toBe(4);
-  await page.reload();
-  await expect(
-    page.getByRole("button", { name: "ペン", exact: true }),
-  ).toBeEnabled();
-  await expectCanvasUnchanged(page, image);
-  const after = await stored(page);
-  expect(after.version).toBe(5);
-  expect(after.assets).toEqual(before.assets);
-  expect(after.artworks).toEqual(before.artworks);
-  expect(
-    await page.evaluate(
-      () =>
-        new Promise((resolve) => {
-          const r = indexedDB.open("suki-sketch", 4);
-          r.onerror = () => resolve(r.error?.name);
-          r.onsuccess = () => {
-            r.result.close();
-            resolve("unexpected");
-          };
-        }),
-    ),
-  ).toBe("VersionError");
-});
+}

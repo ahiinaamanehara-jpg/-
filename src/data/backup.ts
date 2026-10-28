@@ -10,6 +10,12 @@ import { validateReflection, type Reflection } from "./reflections";
 import { inspectImageDimensions } from "./images";
 import { decodePNG } from "../drawing/surface";
 import {
+  isCanvasDimensions,
+  sameDimensions,
+  thumbnailDimensions,
+  type CanvasDimensions,
+} from "../drawing/dimensions";
+import {
   backupError,
   MAX_MANIFEST,
   MAX_ZIP,
@@ -34,7 +40,7 @@ interface AssetRecord {
 }
 interface Manifest {
   format: "suki-sketch";
-  version: 1 | 2 | 3;
+  version: 1 | 2 | 3 | 4;
   createdAt: string;
   characters: Character[];
   artworks: ArtworkDraft[];
@@ -115,18 +121,23 @@ function validateGraph(
   if (assets.size > 1000) throw backupError();
   const owned = new Set<string>(),
     pairs = new Set<string>();
-  const link = (id: string | undefined, kind: StoredAsset["kind"]) => {
+  const link = (
+    id: string | undefined,
+    kind: StoredAsset["kind"],
+    size?: CanvasDimensions,
+  ) => {
     if (!id) return;
     if (assets.get(id)?.kind !== kind || owned.has(id)) throw backupError();
+    if (size && !sameDimensions(assets.get(id)!, size)) throw backupError();
     owned.add(id);
   };
   for (const c of characters.values()) link(c.referenceAssetId, "reference");
   for (const a of artworks.values()) {
     if (a.characterId && !characters.has(a.characterId)) throw backupError();
-    link(a.canvasAssetId, "canvas");
-    link(a.thumbnailAssetId, "thumbnail");
+    link(a.canvasAssetId, "canvas", a);
+    link(a.thumbnailAssetId, "thumbnail", thumbnailDimensions(a));
     link(a.tracing?.assetId, "guide");
-    for (const layer of a.layers?.items ?? []) link(layer.assetId, "layer");
+    for (const layer of a.layers?.items ?? []) link(layer.assetId, "layer", a);
   }
   for (const r of reflections.values()) {
     if (
@@ -155,16 +166,12 @@ function validateGraph(
       a.height < 1
     )
       throw backupError();
-    const side =
-      a.kind === "canvas" || a.kind === "layer"
-        ? 960
-        : a.kind === "thumbnail"
-          ? 192
-          : undefined;
     if (
-      side
-        ? a.width !== side || a.height !== side
-        : Math.max(a.width, a.height) > 1600
+      a.kind === "canvas" || a.kind === "layer"
+        ? !isCanvasDimensions(a)
+        : a.kind === "thumbnail"
+          ? Math.max(a.width, a.height) !== 192
+          : Math.max(a.width, a.height) > 1600
     )
       throw backupError();
   }
@@ -215,7 +222,7 @@ export function validateManifest(raw: unknown): Manifest {
   const m = raw as Manifest;
   if (
     m.format !== "suki-sketch" ||
-    ![1, 2, 3].includes(m.version) ||
+    ![1, 2, 3, 4].includes(m.version) ||
     typeof m.createdAt !== "string" ||
     !Number.isFinite(Date.parse(m.createdAt)) ||
     ![m.characters, m.artworks, m.reflections, m.assets, m.settings].every(
@@ -224,6 +231,11 @@ export function validateManifest(raw: unknown): Manifest {
   )
     throw backupError();
   try {
+    if (
+      m.version < 4 &&
+      m.artworks.some((a) => a?.width !== 960 || a?.height !== 960)
+    )
+      throw backupError();
     if (
       m.version === 1 &&
       (m.artworks.some((a) => a?.tracing !== undefined) ||
@@ -297,7 +309,7 @@ export async function exportBackup() {
   const manifest = validateManifest({
     ...source,
     format: "suki-sketch",
-    version: 3,
+    version: 4,
     createdAt: new Date().toISOString(),
     assets: source.assets.map((a, i) => ({ ...a, file: `assets/${i}.png` })),
   });

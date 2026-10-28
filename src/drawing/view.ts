@@ -1,4 +1,5 @@
 import type { Point } from "./surface";
+import { SQUARE_CANVAS, type CanvasDimensions } from "./dimensions";
 
 export interface CanvasView {
   scale: number;
@@ -28,7 +29,7 @@ function rotate(point: Point, angle: number): Point {
 }
 
 /** 表示の中心が紙の外へ出ない範囲で移動する。回転時も四隅まで寄れる。 */
-export function boundedView(view: CanvasView): CanvasView {
+export function boundedView(view: CanvasView, aspect = 1): CanvasView {
   const scale = clamp(
     Number.isFinite(view.scale) ? view.scale : 1,
     MIN_VIEW_SCALE,
@@ -40,35 +41,41 @@ export function boundedView(view: CanvasView): CanvasView {
   const local = rotate(
     {
       x: Number.isFinite(view.x) ? view.x / scale : 0,
-      y: Number.isFinite(view.y) ? view.y / scale : 0,
+      y: Number.isFinite(view.y) ? view.y / scale / aspect : 0,
     },
     -rotation,
   );
   const pan = rotate(
-    { x: clamp(local.x, -0.5, 0.5), y: clamp(local.y, -0.5, 0.5) },
+    {
+      x: clamp(local.x, -0.5, 0.5),
+      y: clamp(local.y, -0.5 / aspect, 0.5 / aspect),
+    },
     rotation,
   );
-  return { scale, rotation, x: pan.x * scale, y: pan.y * scale };
+  return { scale, rotation, x: pan.x * scale, y: pan.y * scale * aspect };
 }
 
-/** 紙・表示ともに幅を1とする。保存解像度や端末の画素密度に依存しない。 */
-export function paperToView(point: Point, view: CanvasView): Point {
-  const p = rotate({ x: point.x - 0.5, y: point.y - 0.5 }, view.rotation);
+/** xは紙の幅、yは高さで正規化する。回転は同じ物理単位へ換算して行う。 */
+export function paperToView(point: Point, view: CanvasView, aspect = 1): Point {
+  const p = rotate(
+    { x: point.x - 0.5, y: (point.y - 0.5) / aspect },
+    view.rotation,
+  );
   return {
     x: 0.5 + view.x + p.x * view.scale,
-    y: 0.5 + view.y + p.y * view.scale,
+    y: 0.5 + view.y + p.y * view.scale * aspect,
   };
 }
 
-export function viewToPaper(point: Point, view: CanvasView): Point {
+export function viewToPaper(point: Point, view: CanvasView, aspect = 1): Point {
   const p = rotate(
     {
       x: (point.x - 0.5 - view.x) / view.scale,
-      y: (point.y - 0.5 - view.y) / view.scale,
+      y: (point.y - 0.5 - view.y) / view.scale / aspect,
     },
     -view.rotation,
   );
-  return { x: p.x + 0.5, y: p.y + 0.5 };
+  return { x: p.x + 0.5, y: p.y * aspect + 0.5 };
 }
 
 export function viewAround(
@@ -77,46 +84,62 @@ export function viewAround(
   rotation: number,
   anchor = HALF,
   destination = anchor,
+  aspect = 1,
 ): CanvasView {
-  const paper = viewToPaper(anchor, view);
-  const next = boundedView({ ...view, scale, rotation });
-  const rotated = rotate({ x: paper.x - 0.5, y: paper.y - 0.5 }, next.rotation);
-  return boundedView({
-    ...next,
-    x: destination.x - 0.5 - rotated.x * next.scale,
-    y: destination.y - 0.5 - rotated.y * next.scale,
-  });
+  const paper = viewToPaper(anchor, view, aspect);
+  const next = boundedView({ ...view, scale, rotation }, aspect);
+  const rotated = rotate(
+    { x: paper.x - 0.5, y: (paper.y - 0.5) / aspect },
+    next.rotation,
+  );
+  return boundedView(
+    {
+      ...next,
+      x: destination.x - 0.5 - rotated.x * next.scale,
+      y: destination.y - 0.5 - rotated.y * next.scale * aspect,
+    },
+    aspect,
+  );
 }
 
 export function gestureView(
   start: CanvasView,
   from: [Point, Point],
   to: [Point, Point],
+  aspect = 1,
 ) {
   const center = (pair: [Point, Point]) => ({
     x: (pair[0].x + pair[1].x) / 2,
     y: (pair[0].y + pair[1].y) / 2,
   });
   const distance = (pair: [Point, Point]) =>
-    Math.hypot(pair[1].x - pair[0].x, pair[1].y - pair[0].y);
+    Math.hypot(pair[1].x - pair[0].x, (pair[1].y - pair[0].y) / aspect);
   const angle = (pair: [Point, Point]) =>
-    Math.atan2(pair[1].y - pair[0].y, pair[1].x - pair[0].x);
+    Math.atan2((pair[1].y - pair[0].y) / aspect, pair[1].x - pair[0].x);
   return viewAround(
     start,
     (start.scale * distance(to)) / Math.max(0.02, distance(from)),
     start.rotation + normalizeAngle(angle(to) - angle(from)),
     center(from),
     center(to),
+    aspect,
   );
 }
 
-export function drawingPoint(point: Point, view: CanvasView): Point {
-  const p = viewToPaper(point, view);
-  return { x: clamp(p.x, 0, 1) * 960, y: clamp(p.y, 0, 1) * 960 };
+export function drawingPoint(
+  point: Point,
+  view: CanvasView,
+  size: CanvasDimensions = SQUARE_CANVAS,
+): Point {
+  const p = viewToPaper(point, view, size.width / size.height);
+  return {
+    x: clamp(p.x, 0, 1) * size.width,
+    y: clamp(p.y, 0, 1) * size.height,
+  };
 }
 
-export function isOnPaper(point: Point, view: CanvasView) {
-  const p = viewToPaper(point, view);
+export function isOnPaper(point: Point, view: CanvasView, aspect = 1) {
+  const p = viewToPaper(point, view, aspect);
   const epsilon = 1e-9;
   return (
     p.x >= -epsilon &&

@@ -302,7 +302,7 @@ test("下絵と設定をZIPで追加復元し、旧v1も既存作品を変えず
   const archive = await readFile((await (await download).path())!);
   const files = unzipSync(archive),
     manifest = JSON.parse(new TextDecoder().decode(files["manifest.json"]));
-  expect(manifest.version).toBe(3);
+  expect(manifest.version).toBe(4);
   expect(
     manifest.assets.filter((a: { kind: string }) => a.kind === "guide"),
   ).toHaveLength(1);

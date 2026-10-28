@@ -3,6 +3,7 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
 import type { Point } from "../../drawing/surface";
@@ -15,6 +16,8 @@ import {
   viewAround,
   type CanvasView,
 } from "../../drawing/view";
+
+import type { CanvasDimensions } from "../../drawing/dimensions";
 
 type Pointer = Point & { type: string };
 interface Frame {
@@ -34,8 +37,10 @@ export function CanvasViewport({
   onCancel,
   onManipulating,
   controlsTarget,
+  size,
 }: {
   children: ReactNode;
+  size: CanvasDimensions;
   blocked: boolean;
   tracingVisible: boolean;
   onBegin: (point: Point, id: number) => void;
@@ -45,6 +50,9 @@ export function CanvasViewport({
   onManipulating: (active: boolean) => void;
   controlsTarget?: HTMLElement | null;
 }) {
+  const aspect = size.width / size.height;
+  const around = (view: CanvasView, scale: number, rotation: number) =>
+    viewAround(view, scale, rotation, undefined, undefined, aspect);
   const viewport = useRef<HTMLDivElement>(null);
   const paper = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<CanvasView>({ ...FIT_VIEW });
@@ -61,7 +69,7 @@ export function CanvasViewport({
   const frame = useRef<Frame | undefined>(undefined);
 
   const apply = (next: CanvasView) => {
-    current.current = boundedView(next);
+    current.current = boundedView(next, aspect);
     setView(current.current);
   };
   const readFrame = (): Frame => {
@@ -73,8 +81,8 @@ export function CanvasViewport({
       ),
       width = parseFloat(style.width),
       height = parseFloat(style.height);
-    // Rectangular viewports still contain a square paper. Use its untransformed
-    // placement, so drawing and gestures agree with the image at every size.
+    // Use the untransformed placement and actual aspect ratio of the paper.
+    // Drawing and gestures must agree with the image at every viewport size.
     return {
       left: box.left + box.width / 2 - matrix.e - width / 2,
       top: box.top + box.height / 2 - matrix.f - height / 2,
@@ -145,9 +153,9 @@ export function CanvasViewport({
     } else if (panMode) {
       pan.current = { view: { ...current.current }, from: p };
       onManipulating(true);
-    } else if (!suppressed.current && isOnPaper(p, current.current)) {
+    } else if (!suppressed.current && isOnPaper(p, current.current, aspect)) {
       stroke.current = event.pointerId;
-      onBegin(drawingPoint(p, current.current), event.pointerId);
+      onBegin(drawingPoint(p, current.current, size), event.pointerId);
     }
   };
   const move = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -187,7 +195,9 @@ export function CanvasViewport({
     }
     const to = pair(rect);
     if (gesture.current && to) {
-      apply(gestureView(gesture.current.view, gesture.current.from, to));
+      apply(
+        gestureView(gesture.current.view, gesture.current.from, to, aspect),
+      );
     } else if (pan.current) {
       const p = normalized({ x: event.clientX, y: event.clientY }, rect);
       apply({
@@ -202,6 +212,7 @@ export function CanvasViewport({
           drawingPoint(
             normalized({ x: sample.clientX, y: sample.clientY }, rect),
             current.current,
+            size,
           ),
           event.pointerId,
         );
@@ -256,7 +267,7 @@ export function CanvasViewport({
             type="button"
             onClick={() =>
               apply(
-                viewAround(
+                around(
                   current.current,
                   current.current.scale / 1.25,
                   current.current.rotation,
@@ -270,7 +281,7 @@ export function CanvasViewport({
             type="button"
             onClick={() =>
               apply(
-                viewAround(
+                around(
                   current.current,
                   current.current.scale * 1.25,
                   current.current.rotation,
@@ -287,7 +298,7 @@ export function CanvasViewport({
             type="button"
             onClick={() =>
               apply(
-                viewAround(
+                around(
                   current.current,
                   current.current.scale,
                   current.current.rotation - Math.PI / 12,
@@ -301,7 +312,7 @@ export function CanvasViewport({
             type="button"
             onClick={() =>
               apply(
-                viewAround(
+                around(
                   current.current,
                   current.current.scale,
                   current.current.rotation + Math.PI / 12,
@@ -347,6 +358,7 @@ export function CanvasViewport({
       <div
         ref={viewport}
         className={`canvas-frame${tracingVisible ? " tracing-visible" : ""}${panMode ? " canvas-pan-mode" : ""}`}
+        style={{ "--canvas-aspect": String(aspect) } as CSSProperties}
         tabIndex={0}
         role="group"
         aria-label="キャンバスの表示範囲"

@@ -10,9 +10,13 @@ import {
   type LayerStack,
   type BitmapLayer,
 } from "./layers";
+import {
+  SQUARE_CANVAS,
+  thumbnailDimensions,
+  type CanvasDimensions,
+} from "./dimensions";
 export { pngBlob } from "../images/png";
 
-export const CANVAS_SIZE = 960;
 export const UNDO_BYTES = 32 * 1024 * 1024;
 export const UNDO_LIMIT = 20;
 export interface Point {
@@ -23,16 +27,17 @@ export function canvasPoint(
   clientX: number,
   clientY: number,
   rect: { left: number; top: number; width: number; height: number },
+  size: CanvasDimensions = SQUARE_CANVAS,
 ): Point {
   if (rect.width <= 0 || rect.height <= 0) return { x: 0, y: 0 };
   return {
     x: Math.max(
       0,
-      Math.min(CANVAS_SIZE, ((clientX - rect.left) / rect.width) * CANVAS_SIZE),
+      Math.min(size.width, ((clientX - rect.left) / rect.width) * size.width),
     ),
     y: Math.max(
       0,
-      Math.min(CANVAS_SIZE, ((clientY - rect.top) / rect.height) * CANVAS_SIZE),
+      Math.min(size.height, ((clientY - rect.top) / rect.height) * size.height),
     ),
   };
 }
@@ -185,7 +190,8 @@ export class DrawingSurface {
   }
   private createLayer(info: LayerInfo): LayerCanvas {
     const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = CANVAS_SIZE;
+    canvas.width = this.canvas.width;
+    canvas.height = this.canvas.height;
     const context = canvas.getContext("2d", { willReadFrequently: true });
     if (!context)
       throw new Error("レイヤーを用意できません。描いた絵は保持しています。");
@@ -204,7 +210,7 @@ export class DrawingSurface {
   private composite() {
     if (!this.entries) return;
     this.context.globalCompositeOperation = "source-over";
-    this.context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     for (const entry of this.entries)
       if (entry.info.visible) this.context.drawImage(entry.canvas, 0, 0);
   }
@@ -290,7 +296,12 @@ export class DrawingSurface {
       before,
       removed: {
         id,
-        image: entry.context.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE),
+        image: entry.context.getImageData(
+          0,
+          0,
+          this.canvas.width,
+          this.canvas.height,
+        ),
       },
     });
     this.entries.splice(index, 1);
@@ -304,7 +315,12 @@ export class DrawingSurface {
   begin(point: Point, tools: DrawingTools) {
     if (!this.canDraw || this.strokeSnapshot) return false;
     const context = this.paintContext;
-    this.strokeSnapshot = context.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    this.strokeSnapshot = context.getImageData(
+      0,
+      0,
+      this.canvas.width,
+      this.canvas.height,
+    );
     this.strokeLayerId = this.activeId;
     context.globalCompositeOperation =
       tools.tool === "eraser" ? "destination-out" : "source-over";
@@ -379,7 +395,7 @@ export class DrawingSurface {
           this.entries = restored;
           this.composite();
         } else {
-          this.context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+          this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
           this.context.drawImage(restored[0].canvas, 0, 0);
           for (const entry of restored)
             entry.canvas.width = entry.canvas.height = 0;
@@ -406,7 +422,10 @@ export class DrawingSurface {
           entries.push(entry);
           const image = await decodePNG(item.bitmap);
           try {
-            if (image.width !== CANVAS_SIZE || image.height !== CANVAS_SIZE)
+            if (
+              image.width !== this.canvas.width ||
+              image.height !== this.canvas.height
+            )
               throw new Error("レイヤーのサイズを確認できません。");
             entry.context.drawImage(image.source, 0, 0);
           } finally {
@@ -426,9 +445,12 @@ export class DrawingSurface {
     }
     const image = await decodePNG(blob);
     try {
-      if (image.width !== CANVAS_SIZE || image.height !== CANVAS_SIZE)
+      if (
+        image.width !== this.canvas.width ||
+        image.height !== this.canvas.height
+      )
         throw new Error("保存した絵のサイズを確認できません。");
-      this.context.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.context.drawImage(image.source, 0, 0);
     } finally {
       image.close();
@@ -454,7 +476,10 @@ export class DrawingSurface {
     this.history.push({
       kind: "stroke",
       layerId: this.activeId,
-      image: this.context.createImageData(CANVAS_SIZE, CANVAS_SIZE),
+      image: this.context.createImageData(
+        this.canvas.width,
+        this.canvas.height,
+      ),
     });
   }
   dispose() {
@@ -468,17 +493,18 @@ export class DrawingSurface {
 export function cloneCanvas(
   canvas: HTMLCanvasElement,
   white = false,
-  side = 960,
+  size: CanvasDimensions = canvas,
 ) {
   const copy = document.createElement("canvas");
-  copy.width = copy.height = side;
+  copy.width = size.width;
+  copy.height = size.height;
   const context = copy.getContext("2d");
   if (!context) throw new Error("画像の準備ができませんでした。");
   if (white) {
     context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, side, side);
+    context.fillRect(0, 0, copy.width, copy.height);
   }
-  context.drawImage(canvas, 0, 0, side, side);
+  context.drawImage(canvas, 0, 0, copy.width, copy.height);
   return copy;
 }
 export async function captureDrawing(
@@ -486,7 +512,7 @@ export async function captureDrawing(
   layers?: LayerStack<LayerInfo & { canvas: HTMLCanvasElement }>,
 ): Promise<DrawingBundle> {
   const bitmap = cloneCanvas(canvas);
-  const thumb = cloneCanvas(bitmap, true, 192);
+  const thumb = cloneCanvas(bitmap, true, thumbnailDimensions(bitmap));
   const copies = layers?.items.map(({ canvas, ...info }) => ({
     ...info,
     canvas: cloneCanvas(canvas),
@@ -518,20 +544,27 @@ export async function captureDrawing(
       entry.canvas.width = entry.canvas.height = 0;
   }
 }
-export async function importToBundle(blob: Blob): Promise<DrawingBundle> {
+export async function importToBundle(
+  blob: Blob,
+  size: CanvasDimensions = SQUARE_CANVAS,
+): Promise<DrawingBundle> {
   const image = await decodePNG(blob);
   const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = 960;
+  canvas.width = size.width;
+  canvas.height = size.height;
   try {
-    const scale = Math.min(960 / image.width, 960 / image.height);
+    const scale = Math.min(
+      size.width / image.width,
+      size.height / image.height,
+    );
     const width = image.width * scale,
       height = image.height * scale;
     canvas
       .getContext("2d")!
       .drawImage(
         image.source,
-        (960 - width) / 2,
-        (960 - height) / 2,
+        (size.width - width) / 2,
+        (size.height - height) / 2,
         width,
         height,
       );

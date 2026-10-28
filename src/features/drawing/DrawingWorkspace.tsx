@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { DrawingSupport, type DrawingPanel } from "./DrawingSupport";
+import type { CanvasDimensions } from "../../drawing/dimensions";
 
 /** Canvasを移し替えず、同じdialogを通常表示と画面全体の表示に使う。 */
 export function DrawingWorkspace({
@@ -17,6 +18,7 @@ export function DrawingWorkspace({
   actions,
   feedback,
   drawingNotice,
+  size,
 }: {
   blocked: boolean;
   statusText: string;
@@ -32,6 +34,7 @@ export function DrawingWorkspace({
   actions: (focused: boolean) => ReactNode;
   feedback: ReactNode;
   drawingNotice?: string;
+  size: CanvasDimensions;
 }) {
   const [focused, setFocused] = useState(false);
   const [controlsHidden, setControlsHidden] = useState(false);
@@ -110,9 +113,14 @@ export function DrawingWorkspace({
     const measure = () => {
       const box = element.getBoundingClientRect();
       const { width, height } = box;
+      const scale = Math.min(width / size.width, height / size.height);
       element.style.setProperty(
-        "--paper-size",
-        `${Math.max(0, Math.floor(Math.min(width, height)))}px`,
+        "--paper-width",
+        `${Math.max(0, size.width * scale)}px`,
+      );
+      element.style.setProperty(
+        "--paper-height",
+        `${Math.max(0, size.height * scale)}px`,
       );
       // 設定を開いてもサポートの入口を覆わず、別の機能へ直接切り替えられる。
       dialog.current!.style.setProperty(
@@ -124,7 +132,7 @@ export function DrawingWorkspace({
     observer.observe(element);
     measure();
     return () => observer.disconnect();
-  }, [focused]);
+  }, [focused, size.width, size.height]);
 
   const closePanel = () => {
     const returnFocus =

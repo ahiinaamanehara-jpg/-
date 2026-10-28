@@ -1,4 +1,5 @@
 import { isDrawingTools, type DrawingTools } from "../drawing/tools";
+import { isCanvasDimensions } from "../drawing/dimensions";
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Reflection } from "./reflectionTypes";
 import type { QuestionId } from "./reflectionQuestions";
@@ -60,8 +61,8 @@ export interface ArtworkDraft {
   tools?: DrawingTools;
   tracing?: TracingSettings;
   layers?: LayerStack<StoredLayer>;
-  width: 960;
-  height: 960;
+  width: number;
+  height: number;
   createdAt: string;
   updatedAt: string;
   revision: number;
@@ -137,8 +138,7 @@ export function validateArtworkDraft(value: ArtworkDraft): ArtworkDraft {
             value.tracing?.assetId,
           ].includes(layer.assetId),
         ))) ||
-    value.width !== 960 ||
-    value.height !== 960 ||
+    !isCanvasDimensions(value) ||
     typeof value.createdAt !== "string" ||
     !Number.isFinite(Date.parse(value.createdAt)) ||
     typeof value.updatedAt !== "string" ||
@@ -194,7 +194,7 @@ export async function openWorkshopDB(name = "suki-sketch") {
     if (!currentGroup.rejectors.size) pendingOpens.delete(name);
   };
   const opening = Promise.resolve().then(() =>
-    openDB<WorkshopDB>(name, 5, {
+    openDB<WorkshopDB>(name, 6, {
       upgrade(db, oldVersion, _newVersion, tx) {
         try {
           if (abandoned) {
@@ -255,7 +255,7 @@ export async function openWorkshopDB(name = "suki-sketch") {
               },
             );
           } else {
-            // v5はストアを変えず、旧版でレイヤー作品を上書きできないよう版を上げる。
+            // v5・v6はストアを変えず、旧版でレイヤーや長方形作品を上書きさせない。
             if (!db.objectStoreNames.contains("reflections"))
               throw new StorageSchemaError();
             const store = tx.objectStore("reflections");

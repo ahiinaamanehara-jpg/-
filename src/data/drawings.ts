@@ -22,6 +22,14 @@ import {
 } from "./layers";
 import type { LayerStack, BitmapLayer } from "../drawing/layers";
 
+import {
+  isCanvasDimensions,
+  SQUARE_CANVAS,
+  sameDimensions,
+  thumbnailDimensions,
+  type CanvasDimensions,
+} from "../drawing/dimensions";
+
 export interface DrawingBundle {
   bitmap: Blob;
   thumbnail: Blob;
@@ -35,14 +43,12 @@ export class DrawingConflictError extends Error {
     this.name = "DrawingConflictError";
   }
 }
-async function validateBundle(bundle: DrawingBundle, tools: DrawingTools) {
+async function validateBundle(
+  bundle: DrawingBundle,
+  tools: DrawingTools,
+): Promise<CanvasDimensions> {
   if (!isDrawingTools(tools)) throw new StorageSchemaError();
-  if (bundle.layers !== undefined && bundle.layers !== null)
-    await validateLayerBitmaps(bundle.layers);
-  for (const [kind, blob, side] of [
-    ["canvas", bundle.bitmap, 960],
-    ["thumbnail", bundle.thumbnail, 192],
-  ] as const) {
+  for (const blob of [bundle.bitmap, bundle.thumbnail]) {
     if (
       !(blob instanceof Blob) ||
       blob.type !== "image/png" ||
@@ -52,38 +58,48 @@ async function validateBundle(bundle: DrawingBundle, tools: DrawingTools) {
       throw new Error(
         "作品の画像を確認できません。PNGを書き出してからもう一度お試しください。",
       );
-    const dimensions = inspectImageDimensions(
-      await blob.arrayBuffer(),
-      "image/png",
-    );
-    if (dimensions.width !== side || dimensions.height !== side)
-      throw new Error(
-        `${kind === "canvas" ? "作品" : "サムネイル"}のサイズを確認できません。`,
-      );
   }
+  const size = inspectImageDimensions(
+    await bundle.bitmap.arrayBuffer(),
+    "image/png",
+  );
+  if (!isCanvasDimensions(size)) throw new StorageSchemaError();
+  const thumb = inspectImageDimensions(
+    await bundle.thumbnail.arrayBuffer(),
+    "image/png",
+  );
+  if (!sameDimensions(thumb, thumbnailDimensions(size)))
+    throw new StorageSchemaError();
+  if (bundle.layers !== undefined && bundle.layers !== null)
+    await validateLayerBitmaps(bundle.layers, size);
+  return size;
 }
-function makeAssets(bundle: DrawingBundle): ArtworkAsset[] {
+function makeAssets(
+  bundle: DrawingBundle,
+  size: CanvasDimensions,
+): ArtworkAsset[] {
   return (
     [
-      ["canvas", bundle.bitmap, 960],
-      ["thumbnail", bundle.thumbnail, 192],
+      ["canvas", bundle.bitmap, size],
+      ["thumbnail", bundle.thumbnail, thumbnailDimensions(size)],
     ] as const
-  ).map(([kind, blob, side]) => ({
+  ).map(([kind, blob, dimensions]) => ({
     id: crypto.randomUUID(),
     kind,
     blob,
     mime: "image/png",
     size: blob.size,
-    width: side,
-    height: side,
+    width: dimensions.width,
+    height: dimensions.height,
   }));
 }
 export function validateStoredImage(
   asset: StoredAsset | undefined,
   id: string,
   kind: ArtworkAsset["kind"],
+  size: CanvasDimensions = SQUARE_CANVAS,
 ): asserts asset is ArtworkAsset {
-  const side = kind === "canvas" ? 960 : 192;
+  const dimensions = kind === "canvas" ? size : thumbnailDimensions(size);
   if (
     !asset ||
     asset.id !== id ||
@@ -94,8 +110,7 @@ export function validateStoredImage(
     asset.size < 1 ||
     asset.size > 10 * 1024 * 1024 ||
     asset.blob.size !== asset.size ||
-    asset.width !== side ||
-    asset.height !== side
+    !sameDimensions(asset, dimensions)
   )
     throw new StorageSchemaError();
 }
@@ -109,14 +124,13 @@ export async function loadDrawingBitmap(
       db.get("assets", draft.canvasAssetId),
       db.get("assets", draft.thumbnailAssetId!),
     ]);
-    validateStoredImage(asset, draft.canvasAssetId, "canvas");
-    validateStoredImage(thumbnail, draft.thumbnailAssetId!, "thumbnail");
+    validateStoredImage(asset, draft.canvasAssetId, "canvas", draft);
+    validateStoredImage(thumbnail, draft.thumbnailAssetId!, "thumbnail", draft);
     const size = inspectImageDimensions(
       await asset.blob.arrayBuffer(),
       "image/png",
     );
-    if (size.width !== 960 || size.height !== 960)
-      throw new StorageSchemaError();
+    if (!sameDimensions(size, draft)) throw new StorageSchemaError();
     return asset.blob;
   } finally {
     db.close();
@@ -129,7 +143,7 @@ export async function saveDrawing(
   tools: DrawingTools,
   tracing?: TracingUpdate,
 ): Promise<ArtworkDraft> {
-  await validateBundle(bundle, tools);
+  const size = await validateBundle(bundle, tools);
   if (tracing?.settings && !isTracingSettings(tracing.settings))
     throw new StorageSchemaError();
   if (tracing?.asset) {
@@ -149,17 +163,20 @@ export async function saveDrawing(
       const previous = validateArtworkDraft(raw);
       if (previous.revision !== expectedRevision)
         throw new DrawingConflictError();
+      if (!sameDimensions(previous, size)) throw new StorageSchemaError();
       // 壊れた参照をたどって、参考画像など別種のデータを削除しない。
       if (previous.canvasAssetId && previous.thumbnailAssetId) {
         validateStoredImage(
           await tx.objectStore("assets").get(previous.canvasAssetId),
           previous.canvasAssetId,
           "canvas",
+          previous,
         );
         validateStoredImage(
           await tx.objectStore("assets").get(previous.thumbnailAssetId),
           previous.thumbnailAssetId,
           "thumbnail",
+          previous,
         );
       }
       if (previous.layers && bundle.layers === undefined)
@@ -168,11 +185,12 @@ export async function saveDrawing(
         validateLayerAsset(
           await tx.objectStore("assets").get(layer.assetId),
           layer.assetId,
+          previous,
         );
-      const layerAssets = makeLayerAssets(bundle.layers);
+      const layerAssets = makeLayerAssets(bundle.layers, size);
       for (const asset of layerAssets.assets)
         await tx.objectStore("assets").add(asset);
-      const [bitmap, thumbnail] = makeAssets(bundle);
+      const [bitmap, thumbnail] = makeAssets(bundle, size);
       await tx.objectStore("assets").add(bitmap);
       await tx.objectStore("assets").add(thumbnail);
       const next: ArtworkDraft = {
@@ -259,7 +277,7 @@ export async function createDrawingCopy(
   fallback?: ArtworkDraft,
   tracingOverride?: TracingUpdate,
 ): Promise<ArtworkDraft> {
-  await validateBundle(bundle, tools);
+  const size = await validateBundle(bundle, tools);
   const db = await openWorkshopDB();
   try {
     // Blobの実体コピーは書込TXの外で終え、非同期読出しによるTX失効を避ける。
@@ -289,6 +307,7 @@ export async function createDrawingCopy(
       )
         throw new DrawingConflictError();
       const source = validateArtworkDraft(raw ?? fallback!);
+      if (!sameDimensions(source, size)) throw new StorageSchemaError();
       if (
         !tracingOverride &&
         source.tracing?.assetId !== initialSource?.tracing?.assetId
@@ -299,10 +318,10 @@ export async function createDrawingCopy(
         source.revision !== expectedRevision
       )
         throw new DrawingConflictError();
-      const layerAssets = makeLayerAssets(bundle.layers);
+      const layerAssets = makeLayerAssets(bundle.layers, size);
       for (const asset of layerAssets.assets)
         await tx.objectStore("assets").add(asset);
-      const [bitmap, thumbnail] = makeAssets(bundle);
+      const [bitmap, thumbnail] = makeAssets(bundle, size);
       await tx.objectStore("assets").add(bitmap);
       await tx.objectStore("assets").add(thumbnail);
       const now = new Date().toISOString();

@@ -434,7 +434,7 @@ test("下絵はPNGに混ぜずZIPで残し、専用画面・文字200%と顔や�
   const zipped = await readFile((await (await zipDownload).path())!),
     files = unzipSync(zipped);
   const manifest = JSON.parse(new TextDecoder().decode(files["manifest.json"]));
-  expect(manifest.version).toBe(3);
+  expect(manifest.version).toBe(4);
   const asset = manifest.assets.find(
     (asset: { id: string }) => asset.id === work.tracing!.assetId,
   );

@@ -14,6 +14,7 @@ const commonTests = [
   "**/workspace.spec.ts",
   "**/workspace-hidden.spec.ts",
   "**/layers.spec.ts",
+  "**/canvas-size.spec.ts",
 ];
 
 // 利用可能なブラウザーを明示的に実行する。未導入を成功やスキップにしない。
@@ -37,6 +38,7 @@ export default defineConfig({
         "**/workspace-touch.spec.ts",
         "**/workspace-hidden-touch.spec.ts",
         "**/layers-touch.spec.ts",
+        "**/canvas-size-touch.spec.ts",
       ],
       use: {
         ...devices["Desktop Chrome"],

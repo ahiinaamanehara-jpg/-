@@ -66,7 +66,7 @@ describe("バックアップの関係と上限", () => {
   it("空データと現在の形式を受け入れる", () =>
     expect(validateManifest(base()).version).toBe(1));
   it.each([
-    { version: 4 },
+    { version: 5 },
     { format: "other" },
     { createdAt: "invalid" },
     { characters: null },
