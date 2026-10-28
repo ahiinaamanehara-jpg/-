@@ -12,7 +12,7 @@ M16では「新しく描く」に **「キャンバスの形」** を追加し�
 
 形は描き始める前に選びます。既存の作品は自動変更せず、保存・再開・レイヤー・PNG・画像取込の別作品・ZIPで作品ごとの寸法を保ちます。「画面いっぱいで描く」と「ボタンを隠す」も使えます。保存領域はv6、ZIP出力はv4へ更新し、旧ZIP v1〜v3を読み込めます。古いタブが開いている場合は閉じて再読み込みしてください。サイトデータは削除しません。
 
-M16の検証結果は[テスト記録](docs/TEST_PLAN.md)、実機の確認方法は[スマホの手順](docs/MOBILE_TEST_GUIDE.md)へ記録します。公開更新は従来どおり[Publish test site](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/pages.yml)をmainで実行します。pushだけでは公開サイトは更新されません。
+M16は単体191件と[3ブラウザー129件](https://github.com/ahiinaamanehara-jpg/-/actions/runs/40617548254)、型チェック・lint・本番ビルドが成功しました。全体148件成功・保存待ちで止まった1件は、待機条件を揃えた振り返り16件で成功を確認しました。初回の失敗と修正を[テスト記録](docs/TEST_PLAN.md)へ記録しました。実機の確認方法は[スマホの手順](docs/MOBILE_TEST_GUIDE.md)を使います。公開更新は従来どおり[Publish test site](https://github.com/ahiinaamanehara-jpg/-/actions/workflows/pages.yml)をmainで実行します。pushだけでは公開サイトは更新されません。
 
 以下はM15までの記録です。固定960px正方形という説明はM16で上記へ更新しました。
 

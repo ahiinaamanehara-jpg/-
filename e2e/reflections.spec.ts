@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { DRAWING_SAVE_TIMEOUT_MS } from "./support/storageDiagnostics";
 
 async function start(page: Page, theme = "") {
   await page.goto("#/new");
@@ -32,7 +33,9 @@ async function image(page: Page) {
 }
 async function saved(page: Page) {
   await page.getByRole("button", { name: "途中で保存", exact: true }).click();
-  await expect(page.locator(".save-status")).toHaveText("保存済み");
+  await expect(page.locator(".save-status")).toHaveText("保存済み", {
+    timeout: DRAWING_SAVE_TIMEOUT_MS,
+  });
 }
 async function open(page: Page) {
   await page
