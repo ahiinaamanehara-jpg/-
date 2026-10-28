@@ -577,12 +577,13 @@ test("参考画像の開閉で絵を失わず、白背景のPNGに参考画像�
       new Blob([new Uint8Array(bytes)], { type: "image/png" }),
     );
     const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = 960;
+    canvas.width = image.width;
+    canvas.height = image.height;
     const context = canvas.getContext("2d")!;
     context.drawImage(image, 0, 0);
     const size = [image.width, image.height];
     image.close();
-    const rgba = context.getImageData(0, 0, 960, 960).data;
+    const rgba = context.getImageData(0, 0, canvas.width, canvas.height).data;
     let red = 0;
     for (let i = 0; i < rgba.length; i += 4)
       if (rgba[i] === 255 && rgba[i + 1] === 0 && rgba[i + 2] === 0) red++;
@@ -590,10 +591,12 @@ test("参考画像の開閉で絵を失わず、白背景のPNGに参考画像�
       size,
       red,
       corner: Array.from(rgba.slice(0, 4)),
-      middle: Array.from(context.getImageData(480, 480, 1, 1).data),
+      middle: Array.from(
+        context.getImageData(canvas.width / 2, canvas.height / 2, 1, 1).data,
+      ),
     };
   }, bytes);
-  expect(output.size).toEqual([960, 960]);
+  expect(output.size).toEqual([960, 480]);
   expect(output.red).toBe(0);
   expect(output.corner).toEqual([255, 255, 255, 255]);
   expect(output.middle).toEqual([57, 53, 46, 255]);

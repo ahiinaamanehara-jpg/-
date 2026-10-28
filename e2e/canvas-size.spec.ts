@@ -150,9 +150,10 @@ for (const [shape, width, height] of [
       return parseFloat(s.width) / parseFloat(s.height);
     });
     expect(paper).toBeCloseTo(width / height, 5);
-    const target = await paperPosition(page, 0.55, 0.55);
+    // 別色の縁を重ねず、PNG復元とレイヤー合成の丸めを入力座標の検査へ混ぜない。
+    const target = await paperPosition(page, 0.55, 0.8);
     await page.mouse.click(target.x, target.y);
-    expect(await canvasPixel(page, width * 0.55, height * 0.55)).toEqual([
+    expect(await canvasPixel(page, width * 0.55, height * 0.8)).toEqual([
       34, 136, 51, 255,
     ]);
     expect(

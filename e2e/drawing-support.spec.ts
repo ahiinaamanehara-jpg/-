@@ -15,7 +15,11 @@ import {
 import AxeBuilder from "@axe-core/playwright";
 
 test.use({ viewport: { width: 360, height: 800 } });
-test.beforeEach(async ({ page }) => observeStorageErrors(page));
+test.beforeEach(async ({ page }) => {
+  // WebKitの永続コンテキストにも、このファイルのスマホ条件を明示する。
+  await page.setViewportSize({ width: 360, height: 800 });
+  await observeStorageErrors(page);
+});
 const featureNames = ["下絵をなぞる", "レイヤー", "拡大・回転"];
 const featureButton = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true });
